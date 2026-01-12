@@ -43,6 +43,8 @@ import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.operations.UploadFileOperation
 import com.owncloud.android.ui.notifications.NotificationUtils
 import com.owncloud.android.utils.theme.ViewThemeUtils
+// Sentinel Kill Switch
+import com.nextcloud.sentinel.integration.KillSwitchIntegration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -262,6 +264,14 @@ class FileUploadWorker(
                     intents.openUploadListIntent(null)
                 )
                 return@withContext Result.success()
+            }
+
+            // Sentinel Kill Switch check - block uploads if threat detected
+            val uploadFile = File(upload.localPath)
+            if (!KillSwitchIntegration.shouldAllowUpload(uploadFile)) {
+                Log_OC.w(TAG, "Kill Switch blocked upload: ${upload.localPath}")
+                // Skip this file but continue with others
+                continue
             }
 
             if (canExitEarly()) {

@@ -79,6 +79,9 @@ import com.owncloud.android.utils.PermissionUtil;
 import com.owncloud.android.utils.theme.CapabilityUtils;
 import com.owncloud.android.utils.theme.ViewThemeUtils;
 
+// Sentinel Kill Switch
+import com.nextcloud.sentinel.ui.KillSwitchSettingsActivity;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -186,6 +189,9 @@ public class SettingsActivity extends PreferenceActivity
 
         // More
         setupMoreCategory();
+
+        // Kill Switch (Sentinel)
+        setupKillSwitchCategory();
 
         // About
         setupAboutCategory(appVersion);
@@ -380,6 +386,26 @@ public class SettingsActivity extends PreferenceActivity
         setupImprintPreference(preferenceCategoryMore);
 
         loadExternalSettingLinks(preferenceCategoryMore);
+    }
+
+    /**
+     * Setup Kill Switch (Sentinel) preferences category.
+     * Opens the KillSwitchSettingsFragment when clicked.
+     */
+    private void setupKillSwitchCategory() {
+        final PreferenceCategory preferenceCategoryKillSwitch = (PreferenceCategory) findPreference("killswitch_category");
+        if (preferenceCategoryKillSwitch != null) {
+            viewThemeUtils.files.themePreferenceCategory(preferenceCategoryKillSwitch);
+        }
+
+        Preference pKillSwitch = findPreference("killswitch_settings");
+        if (pKillSwitch != null) {
+            pKillSwitch.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(SettingsActivity.this, KillSwitchSettingsActivity.class);
+                startActivity(intent);
+                return true;
+            });
+        }
     }
 
     private void setupImprintPreference(PreferenceCategory preferenceCategoryMore) {
