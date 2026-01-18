@@ -278,6 +278,11 @@ public abstract class DrawerActivity extends ToolbarActivity
         startPhotoSearch(menuItemId);
     }
 
+    private void openSentinelGallery() {
+        resetOnlyPersonalAndOnDevice();
+        startActivity(SentinelGalleryActivity.class, Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    }
+
     @Nullable
     public OCFileListFragment getOCFileListFragment() {
         Fragment fragment = ActivityExtensionsKt.lastFragment(this);
@@ -552,6 +557,8 @@ public abstract class DrawerActivity extends ToolbarActivity
             openFavoritesTab();
         } else if (itemId == R.id.nav_gallery) {
             openMediaTab(menuItem.getItemId());
+        } else if (itemId == R.id.nav_sentinel_gallery) {
+            openSentinelGallery();
         } else if (itemId == R.id.nav_on_device) {
             showOnDeviceFiles();
         } else if (itemId == R.id.nav_uploads) {

@@ -63,6 +63,11 @@
             android:orderInCategory="1"
             android:title="@string/drawer_item_gallery" />
         <item
+            android:id="@+id/nav_sentinel_gallery"
+            android:icon="@drawable/selector_media"
+            android:orderInCategory="1"
+            android:title="@string/drawer_item_sentinel_gallery" />
+        <item
             android:id="@+id/nav_uploads"
             android:icon="@drawable/uploads"
             android:orderInCategory="1"

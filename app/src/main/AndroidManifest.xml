@@ -582,6 +582,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="true" />
         <activity
+            android:name=".ui.activity.SentinelGalleryActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:label="@string/drawer_item_sentinel_gallery" />
+        <activity
             android:name="com.nextcloud.client.onboarding.WhatsNewActivity"
             android:theme="@style/Theme.ownCloud.noActionBar.Login" />
         <activity
