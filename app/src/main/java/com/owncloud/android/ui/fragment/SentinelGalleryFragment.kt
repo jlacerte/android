@@ -24,7 +24,7 @@ import com.owncloud.android.datamodel.FileDataStorageManager
 import com.owncloud.android.datamodel.OCFile
 import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.lib.resources.tags.Tag
-import com.owncloud.android.ui.activity.FileDisplayActivity
+import com.owncloud.android.ui.activity.BaseActivity
 import com.owncloud.android.ui.adapter.SentinelGalleryAdapter
 import com.owncloud.android.ui.helpers.SentinelTagFilterHelper
 import com.owncloud.android.utils.theme.ViewThemeUtils
@@ -114,14 +114,19 @@ class SentinelGalleryFragment : Fragment(), Injectable, SwipeRefreshLayout.OnRef
 
     private fun setupStorageManager() {
         val activity = requireActivity()
-        if (activity is FileDisplayActivity) {
+        if (activity is BaseActivity) {
             storageManager = activity.storageManager
         }
     }
 
     private fun setupRecyclerView() {
         val user = accountManager.user
-        val manager = storageManager ?: return
+        val manager = storageManager
+        if (manager == null) {
+            Log_OC.e(TAG, "setupRecyclerView: storageManager is null!")
+            return
+        }
+        Log_OC.d(TAG, "setupRecyclerView: creating adapter")
         adapter = SentinelGalleryAdapter(
             context = requireContext(),
             user = user,
@@ -134,6 +139,7 @@ class SentinelGalleryFragment : Fragment(), Injectable, SwipeRefreshLayout.OnRef
             layoutManager = GridLayoutManager(requireContext(), columnCount)
             adapter = this@SentinelGalleryFragment.adapter
         }
+        Log_OC.d(TAG, "setupRecyclerView: adapter set on RecyclerView")
     }
 
     private fun setupSwipeRefresh() {
@@ -293,18 +299,12 @@ class SentinelGalleryFragment : Fragment(), Injectable, SwipeRefreshLayout.OnRef
     }
 
     private fun onMediaItemClicked(file: OCFile) {
-        val activity = requireActivity()
-        if (activity is FileDisplayActivity) {
-            activity.fileOperationsHelper.openFile(file)
-        }
+        // TODO: Implement file preview
+        Log_OC.d(TAG, "Media item clicked: ${file.fileName}")
     }
 
     private fun updateActionBar() {
-        val activity = requireActivity()
-        if (activity is FileDisplayActivity) {
-            activity.updateActionBarTitleAndHomeButtonByString(getString(R.string.drawer_item_gallery))
-            activity.setMainFabVisible(false)
-        }
+        // ActionBar is handled by SentinelGalleryActivity
     }
 
     fun clearTagFilter() {

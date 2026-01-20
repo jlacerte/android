@@ -68,6 +68,7 @@ import com.owncloud.android.ui.activity.PassCodeActivity;
 import com.owncloud.android.ui.activity.ReceiveExternalFilesActivity;
 import com.owncloud.android.ui.activity.RequestCredentialsActivity;
 import com.owncloud.android.ui.activity.RichDocumentsEditorWebView;
+import com.owncloud.android.ui.activity.SentinelGalleryActivity;
 import com.owncloud.android.ui.activity.SettingsActivity;
 import com.owncloud.android.ui.activity.ShareActivity;
 import com.owncloud.android.ui.activity.SsoGrantPermissionActivity;
@@ -107,6 +108,7 @@ import com.owncloud.android.ui.fragment.FileDetailFragment;
 import com.owncloud.android.ui.fragment.FileDetailSharingFragment;
 import com.owncloud.android.ui.fragment.FileDetailsSharingProcessFragment;
 import com.owncloud.android.ui.fragment.GalleryFragment;
+import com.owncloud.android.ui.fragment.SentinelGalleryFragment;
 import com.owncloud.android.ui.fragment.GalleryFragmentBottomSheetDialog;
 import com.owncloud.android.ui.fragment.GroupfolderListFragment;
 import com.owncloud.android.ui.fragment.LocalFileListFragment;
@@ -214,6 +216,9 @@ abstract class ComponentsModule {
     abstract RequestCredentialsActivity requestCredentialsActivity();
 
     @ContributesAndroidInjector
+    abstract SentinelGalleryActivity sentinelGalleryActivity();
+
+    @ContributesAndroidInjector
     abstract SettingsActivity settingsActivity();
 
     @ContributesAndroidInjector
@@ -314,6 +319,9 @@ abstract class ComponentsModule {
 
     @ContributesAndroidInjector
     abstract GalleryFragment photoFragment();
+
+    @ContributesAndroidInjector
+    abstract SentinelGalleryFragment sentinelGalleryFragment();
 
     @ContributesAndroidInjector
     abstract MultipleAccountsDialog multipleAccountsDialog();

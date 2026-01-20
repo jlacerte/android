@@ -67,10 +67,12 @@ class SentinelGalleryAdapter(
     }
 
     fun setFiles(newFiles: List<OCFile>) {
+        Log_OC.d(TAG, "setFiles called with ${newFiles.size} files")
         val diffCallback = FilesDiffCallback(files, newFiles)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
         files = newFiles
         diffResult.dispatchUpdatesTo(this)
+        Log_OC.d(TAG, "After setFiles, adapter count: ${files.size}")
     }
 
     fun cleanup() {

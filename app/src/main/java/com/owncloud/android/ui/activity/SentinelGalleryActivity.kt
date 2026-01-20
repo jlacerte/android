@@ -7,6 +7,7 @@
 package com.owncloud.android.ui.activity
 
 import android.os.Bundle
+import android.view.MenuItem
 import com.owncloud.android.R
 import com.owncloud.android.databinding.ActivitySentinelGalleryBinding
 import com.owncloud.android.ui.fragment.SentinelGalleryFragment
@@ -47,5 +48,19 @@ class SentinelGalleryActivity : DrawerActivity() {
         menuItemId = getPreviousMenuItemId()
         setNavigationViewItemChecked()
         super.onPause()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                if (isDrawerOpen) {
+                    closeDrawer()
+                } else {
+                    openDrawer()
+                }
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 }
