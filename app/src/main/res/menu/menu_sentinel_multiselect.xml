@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Nextcloud - Android Client
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Justin Lacerte
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_share"
+        android:icon="@drawable/ic_share"
+        android:title="@string/action_send_share"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_download"
+        android:icon="@drawable/ic_download_grey600"
+        android:title="@string/filedetails_download"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_favorite"
+        android:icon="@drawable/ic_star_outline"
+        android:title="@string/drawer_item_favorites"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_delete"
+        android:icon="@drawable/ic_delete"
+        android:title="@string/common_delete"
+        app:showAsAction="ifRoom" />
+
+</menu>

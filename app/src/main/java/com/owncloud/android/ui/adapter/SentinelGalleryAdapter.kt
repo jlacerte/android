@@ -25,13 +25,16 @@ import com.owncloud.android.utils.theme.ViewThemeUtils
 /**
  * Adapter for the Sentinel Gallery grid view.
  * Displays media thumbnails with optional tag badges.
+ * Supports multi-select mode for batch operations.
  */
 class SentinelGalleryAdapter(
     private val context: Context,
     private val user: User,
     private val storageManager: FileDataStorageManager,
     private val viewThemeUtils: ViewThemeUtils,
-    private val onItemClick: (OCFile) -> Unit
+    private val onItemClick: (OCFile) -> Unit,
+    private val onItemLongClick: (OCFile) -> Boolean = { false },
+    private val onSelectionChanged: () -> Unit = {}
 ) : RecyclerView.Adapter<SentinelGalleryAdapter.ViewHolder>() {
 
     companion object {
@@ -40,6 +43,17 @@ class SentinelGalleryAdapter(
 
     private var files: List<OCFile> = emptyList()
     private val asyncTasks = mutableListOf<ThumbnailsCacheManager.ThumbnailGenerationTask>()
+
+    // Multi-select support
+    var isMultiSelectMode: Boolean = false
+        private set
+    private val checkedFiles: MutableSet<OCFile> = mutableSetOf()
+
+    val checkedItems: Set<OCFile>
+        get() = checkedFiles.toSet()
+
+    val checkedCount: Int
+        get() = checkedFiles.size
 
     class ViewHolder(val binding: ItemSentinelGalleryBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -57,6 +71,7 @@ class SentinelGalleryAdapter(
         bindThumbnail(holder, file)
         bindTagBadge(holder, file)
         bindVideoIndicator(holder, file)
+        bindCheckbox(holder, file)
         bindClickListener(holder, file)
     }
 
@@ -79,6 +94,57 @@ class SentinelGalleryAdapter(
         asyncTasks.forEach { it.cancel(true) }
         asyncTasks.clear()
     }
+
+    // Multi-select methods
+
+    fun enterMultiSelectMode() {
+        if (!isMultiSelectMode) {
+            isMultiSelectMode = true
+            notifyDataSetChanged()
+        }
+    }
+
+    fun exitMultiSelectMode() {
+        if (isMultiSelectMode) {
+            isMultiSelectMode = false
+            checkedFiles.clear()
+            notifyDataSetChanged()
+        }
+    }
+
+    fun toggleSelection(file: OCFile) {
+        if (checkedFiles.contains(file)) {
+            checkedFiles.remove(file)
+        } else {
+            checkedFiles.add(file)
+        }
+        val position = files.indexOf(file)
+        if (position >= 0) {
+            notifyItemChanged(position)
+        }
+        onSelectionChanged()
+    }
+
+    fun isSelected(file: OCFile): Boolean = checkedFiles.contains(file)
+
+    fun clearSelection() {
+        checkedFiles.clear()
+        notifyDataSetChanged()
+    }
+
+    fun selectAll() {
+        checkedFiles.clear()
+        checkedFiles.addAll(files)
+        notifyDataSetChanged()
+    }
+
+    fun getFileAtPosition(position: Int): OCFile? = files.getOrNull(position)
+
+    /**
+     * Returns a copy of the current files list.
+     * Used by SentinelGalleryFragment to pass filtered files to PreviewImageActivity.
+     */
+    fun getCurrentFiles(): List<OCFile> = files.toList()
 
     private fun bindThumbnail(holder: ViewHolder, file: OCFile) {
         val thumbnail = holder.binding.thumbnail
@@ -198,9 +264,30 @@ class SentinelGalleryAdapter(
         }
     }
 
+    private fun bindCheckbox(holder: ViewHolder, file: OCFile) {
+        val checkbox = holder.binding.checkbox
+        if (isMultiSelectMode) {
+            checkbox.visibility = View.VISIBLE
+            val isChecked = checkedFiles.contains(file)
+            checkbox.setImageResource(
+                if (isChecked) android.R.drawable.checkbox_on_background
+                else android.R.drawable.checkbox_off_background
+            )
+        } else {
+            checkbox.visibility = View.GONE
+        }
+    }
+
     private fun bindClickListener(holder: ViewHolder, file: OCFile) {
         holder.itemView.setOnClickListener {
-            onItemClick(file)
+            if (isMultiSelectMode) {
+                toggleSelection(file)
+            } else {
+                onItemClick(file)
+            }
+        }
+        holder.itemView.setOnLongClickListener {
+            onItemLongClick(file)
         }
     }
 

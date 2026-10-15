@@ -13,6 +13,38 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Result count and Clear button bar -->
+    <LinearLayout
+        android:id="@+id/result_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="@dimen/standard_margin"
+        android:paddingEnd="@dimen/standard_margin"
+        android:paddingTop="@dimen/standard_half_margin"
+        android:background="?android:attr/colorBackground">
+
+        <TextView
+            android:id="@+id/result_count_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?android:attr/textColorSecondary"
+            tools:text="42 files" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clear_filters_button"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sentinel_clear_filters"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
     <!-- Tag Filter Bar -->
     <LinearLayout
         android:id="@+id/tag_filter_scroll"
@@ -82,6 +114,81 @@
     <!-- Divider -->
     <View
         android:id="@+id/tag_filter_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider" />
+
+    <!-- Date Filter Bar -->
+    <HorizontalScrollView
+        android:id="@+id/date_filter_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/standard_margin"
+        android:paddingEnd="@dimen/standard_margin"
+        android:paddingTop="@dimen/standard_half_margin"
+        android:paddingBottom="@dimen/standard_half_margin"
+        android:background="?android:attr/colorBackground"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/date_chip_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:chipSpacingHorizontal="@dimen/standard_half_margin">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_all_dates"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_all"
+                android:checked="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_today"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_today" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_this_week"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_this_week" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_this_month"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_this_month" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_this_year"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_this_year" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_custom_range"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sentinel_date_custom" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+    </HorizontalScrollView>
+
+    <!-- Divider after date filter -->
+    <View
+        android:id="@+id/date_filter_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="?android:attr/listDivider" />

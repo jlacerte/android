@@ -152,18 +152,41 @@ class PreviewImageActivity :
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun initViewPager(user: User) {
         val virtualFolderType = intent.getSerializableArgument(EXTRA_VIRTUAL_TYPE, Serializable::class.java)
         if (virtualFolderType != null && virtualFolderType !== VirtualFolderType.NONE) {
             val type = virtualFolderType as VirtualFolderType
 
-            previewImagePagerAdapter = PreviewImagePagerAdapter(
-                this,
-                type,
-                user,
-                storageManager,
-                preferences
-            )
+            if (type == VirtualFolderType.SENTINEL) {
+                // For Sentinel Gallery, use the pre-filtered file list passed via Intent
+                val filteredFiles = intent.getParcelableArrayListExtra<OCFile>(EXTRA_FILTERED_FILE_LIST)
+                if (filteredFiles != null && filteredFiles.isNotEmpty()) {
+                    previewImagePagerAdapter = PreviewImagePagerAdapter(
+                        this,
+                        filteredFiles,
+                        user,
+                        storageManager
+                    )
+                } else {
+                    // Fallback to gallery items if no filtered list provided
+                    previewImagePagerAdapter = PreviewImagePagerAdapter(
+                        this,
+                        VirtualFolderType.GALLERY,
+                        user,
+                        storageManager,
+                        preferences
+                    )
+                }
+            } else {
+                previewImagePagerAdapter = PreviewImagePagerAdapter(
+                    this,
+                    type,
+                    user,
+                    storageManager,
+                    preferences
+                )
+            }
         } else {
             // get parent from path
             var parentFolder = file?.let { storageManager.getFileById(it.parentId) }
@@ -593,6 +616,7 @@ class PreviewImageActivity :
     companion object {
         val TAG: String = PreviewImageActivity::class.java.simpleName
         const val EXTRA_VIRTUAL_TYPE: String = "EXTRA_VIRTUAL_TYPE"
+        const val EXTRA_FILTERED_FILE_LIST: String = "EXTRA_FILTERED_FILE_LIST"
         private const val KEY_WAITING_FOR_BINDER = "WAITING_FOR_BINDER"
         private const val KEY_SYSTEM_VISIBLE = "TRUE"
 

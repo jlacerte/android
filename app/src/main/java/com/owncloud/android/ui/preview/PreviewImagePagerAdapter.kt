@@ -114,6 +114,30 @@ class PreviewImagePagerAdapter : FragmentStateAdapter {
         mCachedFragments = SparseArray()
     }
 
+    /**
+     * Constructor for filtered file lists (e.g., Sentinel Gallery with applied filters).
+     *
+     * @param fragmentActivity [FragmentActivity] instance that will handle the [Fragment]s provided by the adapter.
+     * @param filteredFiles    Pre-filtered list of image files to display.
+     * @param user             Current user.
+     * @param storageManager   Bridge to database.
+     */
+    constructor(
+        fragmentActivity: FragmentActivity,
+        filteredFiles: List<OCFile>,
+        user: User,
+        storageManager: FileDataStorageManager
+    ) : super(fragmentActivity) {
+        this.user = user
+        mStorageManager = storageManager
+        imageFiles = filteredFiles.toMutableList()
+
+        mObsoleteFragments = HashSet()
+        mObsoletePositions = HashSet()
+        mDownloadErrors = HashSet()
+        mCachedFragments = SparseArray()
+    }
+
     fun delete(position: Int) {
         if (position < 0 || position >= imageFiles.size) {
             return

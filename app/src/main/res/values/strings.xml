@@ -1223,6 +1223,16 @@
     <string name="drawer_item_sentinel_gallery">Sentinel Gallery</string>
     <string name="filter_mode_and">ALL</string>
     <string name="filter_mode_or">ANY</string>
+    <string name="sentinel_clear_filters">Clear</string>
+    <string name="sentinel_file_count">%d files</string>
+    <string name="sentinel_file_count_singular">%d file</string>
+    <string name="sentinel_no_results">No files match your filters</string>
+    <string name="sentinel_date_all">All</string>
+    <string name="sentinel_date_today">Today</string>
+    <string name="sentinel_date_this_week">This week</string>
+    <string name="sentinel_date_this_month">This month</string>
+    <string name="sentinel_date_this_year">This year</string>
+    <string name="sentinel_date_custom">Custom</string>
     <string name="player_stop">stop</string>
     <string name="player_toggle">toggle</string>
     <string name="choose_which_file">Choose which file to keep!</string>
