@@ -1,4 +1,4 @@
-# Nextcloud Sentinel - Build Guide
+# Cardea Sentinelle - Build Guide
 
 ## Overview
 
@@ -263,4 +263,4 @@ If using code shrinking, add to `proguard-rules.pro`:
 
 ---
 
-*Nextcloud Sentinel Kill Switch - Protection against ransomware and malicious file operations*
+*Cardea Sentinelle Kill Switch - Protection against ransomware and malicious file operations*

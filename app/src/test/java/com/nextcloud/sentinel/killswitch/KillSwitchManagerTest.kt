@@ -1,8 +1,8 @@
 /*
- * Nextcloud Sentinel Android - Kill Switch Tests
+ * Cardea Sentinelle - Android client
  *
- * SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
- * SPDX-License-Identifier: GPL-2.0-or-later
+ * SPDX-FileCopyrightText: 2026 Justin Lacerte and Cardea contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
  */
 
 package com.nextcloud.sentinel.killswitch

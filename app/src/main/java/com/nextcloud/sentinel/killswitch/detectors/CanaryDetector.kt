@@ -1,8 +1,8 @@
 /*
- * Nextcloud Sentinel Android - Canary File Detector
+ * Cardea Sentinelle - Android client
  *
- * SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
- * SPDX-License-Identifier: GPL-2.0-or-later
+ * SPDX-FileCopyrightText: 2026 Justin Lacerte and Cardea contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
  *
  * Detects modifications to trap "canary" files.
  * Ported from C++/Qt desktop implementation.
@@ -158,7 +158,7 @@ class CanaryDetector : ThreatDetector {
                 val canaryFile = File(directory, pattern)
                 canaryFile.writeText(
                     """
-                    |# Nextcloud Sentinel Canary File
+                    |# Cardea Sentinelle Canary File
                     |# DO NOT DELETE OR MODIFY THIS FILE
                     |#
                     |# This file is used to detect ransomware attacks.

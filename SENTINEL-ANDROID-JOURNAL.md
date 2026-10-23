@@ -1,4 +1,4 @@
-# Nextcloud Sentinel Android - Development Journal
+# Cardea Sentinelle Android - Development Journal
 
 ## 2026-01-11 - Kill Switch Core Module Complete
 
