@@ -23,6 +23,7 @@ import com.nextcloud.client.jobs.upload.FileUploadWorker.Companion.SHOW_SAME_FIL
 import com.nextcloud.client.jobs.utils.UploadErrorNotificationManager
 import com.nextcloud.client.network.ConnectivityService
 import com.nextcloud.client.preferences.AppPreferences
+import com.nextcloud.sentinel.integration.KillSwitchIntegration
 import com.nextcloud.utils.ForegroundServiceHelper
 import com.nextcloud.utils.extensions.getPercent
 import com.nextcloud.utils.extensions.updateStatus
@@ -246,6 +247,11 @@ class AlbumFileUploadWorker(
                     intents.openUploadListIntent(null)
                 )
                 return@withContext Result.success()
+            }
+
+            if (!KillSwitchIntegration.shouldAllowUpload(File(upload.localPath))) {
+                Log_OC.w(TAG, "Kill Switch blocked album upload: ${upload.localPath}")
+                continue
             }
 
             if (canExitEarly()) {

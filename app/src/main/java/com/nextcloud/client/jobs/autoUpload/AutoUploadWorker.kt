@@ -25,6 +25,7 @@ import com.nextcloud.client.jobs.upload.UploadDelayPolicy
 import com.nextcloud.client.jobs.utils.UploadErrorNotificationManager
 import com.nextcloud.client.network.ConnectivityService
 import com.nextcloud.client.preferences.AppPreferences
+import com.nextcloud.sentinel.integration.KillSwitchIntegration
 import com.nextcloud.utils.extensions.getLog
 import com.nextcloud.utils.extensions.isConflict
 import com.nextcloud.utils.extensions.isNonRetryable
@@ -302,6 +303,11 @@ class AutoUploadWorker(
                 val file = File(path)
                 val localPath = file.absolutePath
                 val remotePath = syncFolderHelper.getAutoUploadRemotePath(syncedFolder, file)
+
+                if (!KillSwitchIntegration.shouldAllowUpload(file)) {
+                    Log_OC.w(TAG, "Kill Switch blocked auto upload: $localPath")
+                    return@forEachIndexed
+                }
 
                 try {
                     // A camera app can register the file with MediaStore before it finished writing it.
