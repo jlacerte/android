@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Cardea Sentinelle - Android client
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Justin Lacerte and Cardea contributors
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<!-- Provisional icon: a shield with a check mark. The final icon is up to the project owner. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,22 L80,32 L80,54 C80,70 68,82 54,88 C40,82 28,70 28,54 L28,32 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0F4C5C"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M42,55 L50,63 L67,45" />
+</vector>

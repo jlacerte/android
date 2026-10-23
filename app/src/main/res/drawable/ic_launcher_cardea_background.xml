@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Cardea Sentinelle - Android client
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Justin Lacerte and Cardea contributors
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#0F4C5C"
+        android:pathData="M0,0h108v108h-108z" />
+</vector>
