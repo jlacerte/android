@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Cardea Sentinelle - Android client
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Justin Lacerte and Cardea contributors
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<resources>
+    <string name="cardea_about_disclaimer_title">Not the official Nextcloud app</string>
+    <string name="cardea_about_disclaimer_summary">Cardea Sentinelle is an independent build of the Nextcloud Android app with ransomware protection (Kill Switch) added. It is not published, endorsed or supported by Nextcloud GmbH. Nextcloud is a trademark of Nextcloud GmbH; the name is used here only to describe the server this app connects to and the app it is based on.</string>
+</resources>
