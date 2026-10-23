@@ -15,6 +15,7 @@ import com.nextcloud.sentinel.killswitch.ThreatDetector
 import com.nextcloud.sentinel.killswitch.ThreatInfo
 import com.nextcloud.sentinel.killswitch.ThreatLevel
 import java.io.File
+import java.io.IOException
 import java.util.regex.Pattern
 
 /**
@@ -66,6 +67,7 @@ class CanaryDetector : ThreatDetector {
     /**
      * Check if a file matches canary patterns
      */
+    @Suppress("ReturnCount")
     fun isCanaryFile(filePath: String): Boolean {
         val file = File(filePath)
         val filename = file.name.lowercase()
@@ -108,11 +110,8 @@ class CanaryDetector : ThreatDetector {
         return Pattern.compile(regex.toString(), Pattern.CASE_INSENSITIVE)
     }
 
-    override fun analyze(
-        file: File,
-        eventType: FileEvent.EventType,
-        recentEvents: List<FileEvent>
-    ): ThreatInfo {
+    @Suppress("ReturnCount")
+    override fun analyze(file: File, eventType: FileEvent.EventType, recentEvents: List<FileEvent>): ThreatInfo {
         if (!enabled) return ThreatInfo.none()
 
         // Check if this is a canary file
@@ -123,8 +122,11 @@ class CanaryDetector : ThreatDetector {
         // Determine operation type
         val operation = when (eventType) {
             FileEvent.EventType.DELETE -> "DELETED"
+
             FileEvent.EventType.MODIFY -> "MODIFIED"
+
             FileEvent.EventType.RENAME -> "RENAMED"
+
             FileEvent.EventType.CREATE -> {
                 // New canary file is OK (initial setup)
                 return ThreatInfo.none()
@@ -167,7 +169,7 @@ class CanaryDetector : ThreatDetector {
                     """.trimMargin()
                 )
                 canaryFile
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 null
             }
         }

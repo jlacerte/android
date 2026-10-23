@@ -195,35 +195,32 @@ class DefaultSyncController(private val context: Context) : SyncController {
         Log.i(TAG, "Sync resumed")
     }
 
-    override fun isSyncPaused(): Boolean {
-        return prefs.getBoolean(KEY_SYNC_PAUSED, false)
-    }
+    override fun isSyncPaused(): Boolean = prefs.getBoolean(KEY_SYNC_PAUSED, false)
 
     override fun cancelPendingUploads() {
         // This would need to integrate with Nextcloud's upload queue
         // For now, just log the intent
         Log.i(TAG, "Cancel pending uploads requested (needs Nextcloud integration)")
 
-        // TODO: Integrate with Nextcloud's UploadFileOperation or FileUploadWorker
-        // Something like:
-        // FileUploadHelper.instance().cancelAll()
+        // Pending uploads are not cancelled yet: the upload workers consult
+        // KillSwitchIntegration.shouldAllowUpload() before each file instead.
     }
 
     /**
      * Get the reason for the current pause
      */
-    fun getPauseReason(): String? {
-        return if (isSyncPaused()) {
-            prefs.getString(KEY_PAUSE_REASON, null)
-        } else null
+    fun getPauseReason(): String? = if (isSyncPaused()) {
+        prefs.getString(KEY_PAUSE_REASON, null)
+    } else {
+        null
     }
 
     /**
      * Get when sync was paused
      */
-    fun getPauseTimestamp(): Long {
-        return if (isSyncPaused()) {
-            prefs.getLong(KEY_PAUSE_TIMESTAMP, 0)
-        } else 0
+    fun getPauseTimestamp(): Long = if (isSyncPaused()) {
+        prefs.getLong(KEY_PAUSE_TIMESTAMP, 0)
+    } else {
+        0
     }
 }

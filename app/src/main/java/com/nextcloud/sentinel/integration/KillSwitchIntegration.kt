@@ -52,6 +52,7 @@ import java.io.File
  * }
  * ```
  */
+@Suppress("TooManyFunctions")
 object KillSwitchIntegration {
 
     private const val TAG = "KillSwitchIntegration"
@@ -75,10 +76,7 @@ object KillSwitchIntegration {
     @Synchronized
     @JvmStatic
     @JvmOverloads
-    fun initialize(
-        context: Context,
-        syncFolderPaths: List<String> = emptyList()
-    ) {
+    fun initialize(context: Context, syncFolderPaths: List<String> = emptyList()) {
         if (isInitialized) {
             Log.w(TAG, "Already initialized")
             return
@@ -205,9 +203,7 @@ object KillSwitchIntegration {
      * @return true if upload is allowed, false if blocked by Kill Switch
      */
     @JvmStatic
-    fun shouldAllowUpload(file: File): Boolean {
-        return SyncEventListenerProvider.shouldAllowSync(file)
-    }
+    fun shouldAllowUpload(file: File): Boolean = SyncEventListenerProvider.shouldAllowSync(file)
 
     /**
      * Check if a file should be allowed to upload (by path).
@@ -216,9 +212,7 @@ object KillSwitchIntegration {
      * @return true if upload is allowed, false if blocked
      */
     @JvmStatic
-    fun shouldAllowUpload(filePath: String): Boolean {
-        return shouldAllowUpload(File(filePath))
-    }
+    fun shouldAllowUpload(filePath: String): Boolean = shouldAllowUpload(File(filePath))
 
     /**
      * Filter a batch of files, returning only those allowed to upload.
@@ -229,25 +223,19 @@ object KillSwitchIntegration {
      * @return List of files that are allowed to upload
      */
     @JvmStatic
-    fun filterBatch(files: List<File>): List<File> {
-        return SyncEventListenerProvider.filterBatch(files)
-    }
+    fun filterBatch(files: List<File>): List<File> = SyncEventListenerProvider.filterBatch(files)
 
     /**
      * Check if Kill Switch is currently triggered (threat detected).
      */
     @JvmStatic
-    fun isTriggered(): Boolean {
-        return KillSwitchManager.isTriggered()
-    }
+    fun isTriggered(): Boolean = KillSwitchManager.isTriggered()
 
     /**
      * Check if Kill Switch protection is enabled.
      */
     @JvmStatic
-    fun isEnabled(): Boolean {
-        return KillSwitchManager.isEnabled()
-    }
+    fun isEnabled(): Boolean = KillSwitchManager.isEnabled()
 
     /**
      * Enable or disable Kill Switch protection.
@@ -262,9 +250,7 @@ object KillSwitchIntegration {
      * Get the current threat level.
      */
     @JvmStatic
-    fun getCurrentThreatLevel(): ThreatLevel {
-        return KillSwitchManager.threatLevel.value
-    }
+    fun getCurrentThreatLevel(): ThreatLevel = KillSwitchManager.threatLevel.value
 
     /**
      * Reset Kill Switch after user confirmation.
@@ -315,7 +301,6 @@ object KillSwitchIntegration {
      * @return true if threat was detected and actions triggered
      */
     @JvmStatic
-    fun analyzeFileChange(file: File, eventType: FileEvent.EventType): Boolean {
-        return KillSwitchManager.analyzeFile(file, eventType)
-    }
+    fun analyzeFileChange(file: File, eventType: FileEvent.EventType): Boolean =
+        KillSwitchManager.analyzeFile(file, eventType)
 }

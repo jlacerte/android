@@ -40,10 +40,7 @@ import com.nextcloud.sentinel.killswitch.ThreatLevel
  * KillSwitchManager.registerAction(action)
  * ```
  */
-class AlertAction(
-    private val context: Context,
-    private val alertActivityClass: Class<*>? = null  // Optional: custom alert activity
-) : SyncAction {
+class AlertAction(private val context: Context, private val alertActivityClass: Class<*>? = null) : SyncAction {
 
     companion object {
         private const val TAG = "AlertAction"
@@ -64,6 +61,12 @@ class AlertAction(
         // Intent extras
         const val EXTRA_THREAT_ID = "threat_id"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
+
+        private const val MAX_LISTED_FILES = 5
+        private const val DISMISS_REQUEST_OFFSET = 1000
+        private const val RESUME_REQUEST_OFFSET = 2000
+        private val CHANNEL_VIBRATION_PATTERN = longArrayOf(0, 500, 200, 500)
+        private val NOTIFICATION_VIBRATION_PATTERN = longArrayOf(0, 500, 200, 500, 200, 500)
     }
 
     override val name: String = "AlertAction"
@@ -96,9 +99,9 @@ class AlertAction(
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = CHANNEL_DESCRIPTION
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 200, 500)  // Urgent pattern
+                vibrationPattern = CHANNEL_VIBRATION_PATTERN
                 enableLights(true)
-                lightColor = 0xFFFF0000.toInt()  // Red
+                lightColor = 0xFFFF0000.toInt() // Red
 
                 // Set sound
                 val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -134,15 +137,15 @@ class AlertAction(
 
         // Build notification
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)  // TODO: Use custom icon
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(getTitleForLevel(threat.level))
             .setContentText(threat.description)
             .setStyle(buildExpandedStyle(threat))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(false)  // Don't auto-cancel, user must acknowledge
-            .setOngoing(true)      // Persistent until dismissed
+            .setAutoCancel(false) // Don't auto-cancel, user must acknowledge
+            .setOngoing(true) // Persistent until dismissed
             .setContentIntent(contentIntent)
             .setColor(getColorForLevel(threat.level))
             .addAction(
@@ -166,7 +169,7 @@ class AlertAction(
         }
 
         // Vibration pattern
-        builder.setVibrate(longArrayOf(0, 500, 200, 500, 200, 500))
+        builder.setVibrate(NOTIFICATION_VIBRATION_PATTERN)
 
         // Sound
         builder.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
@@ -205,24 +208,28 @@ class AlertAction(
      */
     fun getThreat(notificationId: Int): ThreatInfo? = threats[notificationId]
 
-    private fun getTitleForLevel(level: ThreatLevel): String {
-        return when (level) {
-            ThreatLevel.CRITICAL -> "CRITICAL: Ransomware Detected!"
-            ThreatLevel.HIGH -> "WARNING: Suspicious Activity"
-            ThreatLevel.MEDIUM -> "Alert: Unusual File Activity"
-            ThreatLevel.LOW -> "Notice: File Activity Detected"
-            ThreatLevel.NONE -> "Kill Switch Status"
-        }
+    private fun getTitleForLevel(level: ThreatLevel): String = when (level) {
+        ThreatLevel.CRITICAL -> "CRITICAL: Ransomware Detected!"
+        ThreatLevel.HIGH -> "WARNING: Suspicious Activity"
+        ThreatLevel.MEDIUM -> "Alert: Unusual File Activity"
+        ThreatLevel.LOW -> "Notice: File Activity Detected"
+        ThreatLevel.NONE -> "Kill Switch Status"
     }
 
-    private fun getColorForLevel(level: ThreatLevel): Int {
-        return when (level) {
-            ThreatLevel.CRITICAL -> 0xFFFF0000.toInt()  // Red
-            ThreatLevel.HIGH -> 0xFFFF6600.toInt()      // Orange
-            ThreatLevel.MEDIUM -> 0xFFFFCC00.toInt()    // Yellow
-            ThreatLevel.LOW -> 0xFF0099FF.toInt()       // Blue
-            ThreatLevel.NONE -> 0xFF00CC00.toInt()      // Green
-        }
+    private fun getColorForLevel(level: ThreatLevel): Int = when (level) {
+        ThreatLevel.CRITICAL -> 0xFFFF0000.toInt()
+
+        // Red
+        ThreatLevel.HIGH -> 0xFFFF6600.toInt()
+
+        // Orange
+        ThreatLevel.MEDIUM -> 0xFFFFCC00.toInt()
+
+        // Yellow
+        ThreatLevel.LOW -> 0xFF0099FF.toInt()
+
+        // Blue
+        ThreatLevel.NONE -> 0xFF00CC00.toInt() // Green
     }
 
     private fun buildExpandedStyle(threat: ThreatInfo): NotificationCompat.BigTextStyle {
@@ -235,11 +242,11 @@ class AlertAction(
         if (threat.affectedFiles.isNotEmpty()) {
             details.appendLine()
             details.appendLine("Affected files (${threat.affectedFiles.size}):")
-            threat.affectedFiles.take(5).forEach { file ->
+            threat.affectedFiles.take(MAX_LISTED_FILES).forEach { file ->
                 details.appendLine("  - ${file.substringAfterLast("/")}")
             }
-            if (threat.affectedFiles.size > 5) {
-                details.appendLine("  ... and ${threat.affectedFiles.size - 5} more")
+            if (threat.affectedFiles.size > MAX_LISTED_FILES) {
+                details.appendLine("  ... and ${threat.affectedFiles.size - MAX_LISTED_FILES} more")
             }
         }
 
@@ -283,7 +290,7 @@ class AlertAction(
 
         return PendingIntent.getBroadcast(
             context,
-            notificationId + 1000,
+            notificationId + DISMISS_REQUEST_OFFSET,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -297,27 +304,9 @@ class AlertAction(
 
         return PendingIntent.getBroadcast(
             context,
-            notificationId + 2000,
+            notificationId + RESUME_REQUEST_OFFSET,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 }
-
-/**
- * BroadcastReceiver to handle notification actions.
- *
- * Register in AndroidManifest.xml:
- * ```xml
- * <receiver android:name=".actions.AlertActionReceiver"
- *           android:exported="false">
- *     <intent-filter>
- *         <action android:name="com.nextcloud.sentinel.DISMISS_THREAT" />
- *         <action android:name="com.nextcloud.sentinel.RESUME_SYNC" />
- *     </intent-filter>
- * </receiver>
- * ```
- */
-// Note: Actual BroadcastReceiver would be implemented separately to avoid
-// importing android.content.BroadcastReceiver in this file.
-// See AlertActionReceiver.kt for the implementation.

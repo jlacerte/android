@@ -12,6 +12,7 @@ import java.time.Instant
 /**
  * Threat severity levels
  */
+@Suppress("MagicNumber")
 enum class ThreatLevel(val priority: Int) {
     NONE(0),
     LOW(1),

@@ -36,14 +36,13 @@ import kotlinx.coroutines.launch
  * - View current threat level and status
  * - Reset after threat detection
  */
+@Suppress("MagicNumber", "LongMethod")
 class KillSwitchSettingsFragment : Fragment() {
 
     companion object {
         private const val TAG = "KillSwitchSettings"
 
-        fun newInstance(): KillSwitchSettingsFragment {
-            return KillSwitchSettingsFragment()
-        }
+        fun newInstance(): KillSwitchSettingsFragment = KillSwitchSettingsFragment()
     }
 
     private var enabledSwitch: Switch? = null
@@ -51,13 +50,8 @@ class KillSwitchSettingsFragment : Fragment() {
     private var threatLevelText: TextView? = null
     private var resetButton: Button? = null
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return createUI()
-    }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
+        createUI()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -94,26 +88,30 @@ class KillSwitchSettingsFragment : Fragment() {
         }
 
         // Title
-        rootLayout.addView(TextView(context).apply {
-            text = "Kill Switch Protection"
-            textSize = 24f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 32 }
-        })
+        rootLayout.addView(
+            TextView(context).apply {
+                text = "Kill Switch Protection"
+                textSize = 24f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 32 }
+            }
+        )
 
         // Description
-        rootLayout.addView(TextView(context).apply {
-            text = "Detect and block ransomware attacks before files are synced to your cloud storage."
-            textSize = 14f
-            alpha = 0.7f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 32 }
-        })
+        rootLayout.addView(
+            TextView(context).apply {
+                text = "Detect and block ransomware attacks before files are synced to your cloud storage."
+                textSize = 14f
+                alpha = 0.7f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 32 }
+            }
+        )
 
         // Enable switch row
         val enableRow = LinearLayout(context).apply {
@@ -124,15 +122,17 @@ class KillSwitchSettingsFragment : Fragment() {
             ).apply { bottomMargin = 24 }
         }
 
-        enableRow.addView(TextView(context).apply {
-            text = "Enable Kill Switch"
-            textSize = 16f
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        })
+        enableRow.addView(
+            TextView(context).apply {
+                text = "Enable Kill Switch"
+                textSize = 16f
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+        )
 
         enabledSwitch = Switch(context).apply {
             isChecked = KillSwitchIntegration.isEnabled()
@@ -188,37 +188,41 @@ class KillSwitchSettingsFragment : Fragment() {
         rootLayout.addView(resetButton)
 
         // View threats button
-        rootLayout.addView(Button(context).apply {
-            text = "View Threat Details"
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = 16 }
-            setOnClickListener {
-                startActivity(AlertActivity.createIntent(requireContext()))
+        rootLayout.addView(
+            Button(context).apply {
+                text = "View Threat Details"
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 16 }
+                setOnClickListener {
+                    startActivity(AlertActivity.createIntent(requireContext()))
+                }
             }
-        })
+        )
 
         // Divider
         rootLayout.addView(createDivider(context))
 
         // About section
         rootLayout.addView(createSectionHeader(context, "About"))
-        rootLayout.addView(TextView(context).apply {
-            text = "Kill Switch protects your cloud storage by detecting ransomware patterns " +
-                   "and pausing sync before encrypted files are uploaded. This prevents " +
-                   "ransomware from spreading through your Nextcloud.\n\n" +
-                   "Detection methods:\n" +
-                   "• Entropy analysis (detects encrypted files)\n" +
-                   "• Mass deletion detection\n" +
-                   "• Canary file monitoring"
-            textSize = 14f
-            alpha = 0.7f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        })
+        rootLayout.addView(
+            TextView(context).apply {
+                text = "Kill Switch protects your cloud storage by detecting ransomware patterns " +
+                    "and pausing sync before encrypted files are uploaded. This prevents " +
+                    "ransomware from spreading through your Nextcloud.\n\n" +
+                    "Detection methods:\n" +
+                    "• Entropy analysis (detects encrypted files)\n" +
+                    "• Mass deletion detection\n" +
+                    "• Canary file monitoring"
+                textSize = 14f
+                alpha = 0.7f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+        )
 
         // Update displays
         updateStatusDisplay()
@@ -228,8 +232,8 @@ class KillSwitchSettingsFragment : Fragment() {
         return scrollView
     }
 
-    private fun createSectionHeader(context: android.content.Context, title: String): TextView {
-        return TextView(context).apply {
+    private fun createSectionHeader(context: android.content.Context, title: String): TextView =
+        TextView(context).apply {
             text = title
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -242,18 +246,15 @@ class KillSwitchSettingsFragment : Fragment() {
                 bottomMargin = 8
             }
         }
-    }
 
-    private fun createDivider(context: android.content.Context): View {
-        return View(context).apply {
-            setBackgroundColor(0x20000000)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                2
-            ).apply {
-                topMargin = 24
-                bottomMargin = 8
-            }
+    private fun createDivider(context: android.content.Context): View = View(context).apply {
+        setBackgroundColor(0x20000000)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            2
+        ).apply {
+            topMargin = 24
+            bottomMargin = 8
         }
     }
 
@@ -288,8 +289,8 @@ class KillSwitchSettingsFragment : Fragment() {
             .setTitle("Reset Kill Switch?")
             .setMessage(
                 "Are you sure you want to reset Kill Switch protection?\n\n" +
-                "This will resume sync operations. Only do this if you have verified " +
-                "the threat was a false positive or you have resolved the issue."
+                    "This will resume sync operations. Only do this if you have verified " +
+                    "the threat was a false positive or you have resolved the issue."
             )
             .setPositiveButton("Reset & Resume Sync") { _, _ ->
                 KillSwitchIntegration.reset()

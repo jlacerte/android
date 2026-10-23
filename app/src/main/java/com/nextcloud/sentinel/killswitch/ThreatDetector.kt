@@ -12,11 +12,7 @@ import java.io.File
 /**
  * Represents a file event for analysis
  */
-data class FileEvent(
-    val path: String,
-    val eventType: EventType,
-    val timestamp: Long = System.currentTimeMillis()
-) {
+data class FileEvent(val path: String, val eventType: EventType, val timestamp: Long = System.currentTimeMillis()) {
     enum class EventType {
         CREATE,
         MODIFY,
@@ -50,11 +46,7 @@ interface ThreatDetector {
      * @param recentEvents Recent file events for context
      * @return ThreatInfo with detection results
      */
-    fun analyze(
-        file: File,
-        eventType: FileEvent.EventType,
-        recentEvents: List<FileEvent>
-    ): ThreatInfo
+    fun analyze(file: File, eventType: FileEvent.EventType, recentEvents: List<FileEvent>): ThreatInfo
 
     /**
      * Reset detector state (clear caches, counters, etc.)

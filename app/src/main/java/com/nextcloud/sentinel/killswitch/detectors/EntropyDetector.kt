@@ -15,6 +15,7 @@ import com.nextcloud.sentinel.killswitch.ThreatDetector
 import com.nextcloud.sentinel.killswitch.ThreatInfo
 import com.nextcloud.sentinel.killswitch.ThreatLevel
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.log2
@@ -37,9 +38,9 @@ class EntropyDetector : ThreatDetector {
     override var enabled: Boolean = true
 
     // Thresholds (configurable)
-    var highEntropyThreshold: Double = 7.9      // Definitely encrypted
-    var suspiciousThreshold: Double = 7.5       // Suspicious
-    var sampleSize: Int = 65536                 // 64KB sample
+    var highEntropyThreshold: Double = DEFAULT_HIGH_ENTROPY_THRESHOLD
+    var suspiciousThreshold: Double = DEFAULT_SUSPICIOUS_THRESHOLD
+    var sampleSize: Int = DEFAULT_SAMPLE_SIZE
 
     // Cache of known file entropies for comparison
     private val entropyCache = ConcurrentHashMap<String, Double>()
@@ -59,6 +60,7 @@ class EntropyDetector : ThreatDetector {
     )
 
     // Expected entropy ranges by file type
+    @Suppress("MagicNumber")
     private val entropyRanges = mapOf(
         // Text files: 3.0 - 5.5
         ".txt" to (3.0 to 5.5),
@@ -88,16 +90,14 @@ class EntropyDetector : ThreatDetector {
         ".htm" to (4.0 to 6.0)
     )
 
-    override fun analyze(
-        file: File,
-        eventType: FileEvent.EventType,
-        recentEvents: List<FileEvent>
-    ): ThreatInfo {
+    @Suppress("ReturnCount", "LongMethod")
+    override fun analyze(file: File, eventType: FileEvent.EventType, recentEvents: List<FileEvent>): ThreatInfo {
         if (!enabled) return ThreatInfo.none()
 
         // Only analyze file modifications and creations
         if (eventType != FileEvent.EventType.CREATE &&
-            eventType != FileEvent.EventType.MODIFY) {
+            eventType != FileEvent.EventType.MODIFY
+        ) {
             return ThreatInfo.none()
         }
 
@@ -131,7 +131,10 @@ class EntropyDetector : ThreatDetector {
                     level = ThreatLevel.HIGH,
                     detectorName = name,
                     description = "Suspicious entropy: %.3f (expected: %.1f-%.1f) for %s".format(
-                        entropy, expectedRange.first, expectedRange.second, file.name
+                        entropy,
+                        expectedRange.first,
+                        expectedRange.second,
+                        file.name
                     ),
                     affectedFiles = listOf(file.absolutePath)
                 )
@@ -142,13 +145,16 @@ class EntropyDetector : ThreatDetector {
                 val oldEntropy = entropyCache[file.absolutePath]!!
                 val increase = entropy - oldEntropy
 
-                if (increase > 2.0 && entropy > 7.0) {
+                if (increase > ENTROPY_SPIKE_DELTA && entropy > ENTROPY_SPIKE_FLOOR) {
                     entropyCache[file.absolutePath] = entropy
                     ThreatInfo(
                         level = ThreatLevel.HIGH,
                         detectorName = name,
                         description = "Entropy spike: %.1f -> %.1f (delta: +%.1f) for %s".format(
-                            oldEntropy, entropy, increase, file.name
+                            oldEntropy,
+                            entropy,
+                            increase,
+                            file.name
                         ),
                         affectedFiles = listOf(file.absolutePath)
                     )
@@ -179,9 +185,9 @@ class EntropyDetector : ThreatDetector {
         if (data.isEmpty()) return 0.0
 
         // Count byte frequencies
-        val frequency = IntArray(256)
+        val frequency = IntArray(BYTE_VALUES)
         for (byte in data) {
-            frequency[byte.toInt() and 0xFF]++
+            frequency[byte.toInt() and BYTE_MASK]++
         }
 
         // Calculate Shannon entropy
@@ -197,6 +203,7 @@ class EntropyDetector : ThreatDetector {
      * @param file The file to analyze
      * @return Entropy in bits per byte, or null on error
      */
+    @Suppress("ReturnCount")
     fun calculateFileEntropy(file: File): Double? {
         if (!file.exists() || !file.isFile) return null
 
@@ -209,7 +216,7 @@ class EntropyDetector : ThreatDetector {
                 raf.readFully(buffer)
                 calculateEntropy(buffer)
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             null
         }
     }
@@ -230,15 +237,22 @@ class EntropyDetector : ThreatDetector {
         for ((ext, range) in entropyRanges) {
             if (lower.endsWith(ext)) return range
         }
-        return 0.0 to 8.0 // Default for unknown types
+        return 0.0 to MAX_ENTROPY // Default for unknown types
     }
 
     companion object {
+        const val DEFAULT_HIGH_ENTROPY_THRESHOLD = 7.9
+        const val DEFAULT_SUSPICIOUS_THRESHOLD = 7.5
+        const val DEFAULT_SAMPLE_SIZE = 65536
+        const val MAX_ENTROPY = 8.0
+        private const val ENTROPY_SPIKE_DELTA = 2.0
+        private const val ENTROPY_SPIKE_FLOOR = 7.0
+        private const val BYTE_VALUES = 256
+        private const val BYTE_MASK = 0xFF
+
         /**
          * Quick entropy check for a byte array
          */
-        fun quickEntropyCheck(data: ByteArray): Double {
-            return EntropyDetector().calculateEntropy(data)
-        }
+        fun quickEntropyCheck(data: ByteArray): Double = EntropyDetector().calculateEntropy(data)
     }
 }

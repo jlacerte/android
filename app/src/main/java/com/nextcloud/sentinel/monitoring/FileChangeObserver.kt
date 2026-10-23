@@ -48,12 +48,12 @@ class FileChangeObserver(
         // Events we care about
         private const val EVENTS_MASK = (
             FileObserver.CREATE or
-            FileObserver.MODIFY or
-            FileObserver.DELETE or
-            FileObserver.MOVED_FROM or
-            FileObserver.MOVED_TO or
-            FileObserver.CLOSE_WRITE  // File finished writing
-        )
+                FileObserver.MODIFY or
+                FileObserver.DELETE or
+                FileObserver.MOVED_FROM or
+                FileObserver.MOVED_TO or
+                FileObserver.CLOSE_WRITE // File finished writing
+            )
     }
 
     private var observer: FileObserver? = null
@@ -119,22 +119,21 @@ class FileChangeObserver(
     fun getWatchPath(): String = watchPath
 
     @Suppress("DEPRECATION")
-    private fun createObserver(path: String): FileObserver {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            object : FileObserver(File(path), EVENTS_MASK) {
-                override fun onEvent(event: Int, path: String?) {
-                    handleEvent(event, path)
-                }
+    private fun createObserver(path: String): FileObserver = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        object : FileObserver(File(path), EVENTS_MASK) {
+            override fun onEvent(event: Int, path: String?) {
+                handleEvent(event, path)
             }
-        } else {
-            object : FileObserver(path, EVENTS_MASK) {
-                override fun onEvent(event: Int, path: String?) {
-                    handleEvent(event, path)
-                }
+        }
+    } else {
+        object : FileObserver(path, EVENTS_MASK) {
+            override fun onEvent(event: Int, path: String?) {
+                handleEvent(event, path)
             }
         }
     }
 
+    @Suppress("ReturnCount")
     private fun handleEvent(event: Int, relativePath: String?) {
         if (relativePath == null) return
 
@@ -155,13 +154,16 @@ class FileChangeObserver(
                 }
                 FileEvent.EventType.CREATE
             }
+
             event and FileObserver.CLOSE_WRITE != 0 -> {
                 // CLOSE_WRITE is more reliable than MODIFY for detecting file changes
                 FileEvent.EventType.MODIFY
             }
+
             event and FileObserver.MODIFY != 0 -> {
                 FileEvent.EventType.MODIFY
             }
+
             event and FileObserver.DELETE != 0 -> {
                 // If a directory was deleted, remove its observer
                 if (recursive) {
@@ -169,19 +171,22 @@ class FileChangeObserver(
                 }
                 FileEvent.EventType.DELETE
             }
+
             event and FileObserver.MOVED_FROM != 0 -> {
                 if (recursive) {
                     removeChildObserver(fullPath)
                 }
-                FileEvent.EventType.DELETE  // Treat as delete from this location
+                FileEvent.EventType.DELETE // Treat as delete from this location
             }
+
             event and FileObserver.MOVED_TO != 0 -> {
                 if (recursive && file.isDirectory) {
                     addChildObserver(fullPath)
                 }
-                FileEvent.EventType.CREATE  // Treat as create at this location
+                FileEvent.EventType.CREATE // Treat as create at this location
             }
-            else -> return  // Unknown event, ignore
+
+            else -> return // Unknown event, ignore
         }
 
         Log.d(TAG, "File event: $eventType - $fullPath")

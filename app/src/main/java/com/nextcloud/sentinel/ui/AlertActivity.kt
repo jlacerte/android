@@ -43,6 +43,7 @@ import java.time.format.DateTimeFormatter
  * - Provides Resume Sync button (with confirmation)
  * - Shows threat history
  */
+@Suppress("MagicNumber", "LongMethod", "NestedBlockDepth")
 class AlertActivity : AppCompatActivity() {
 
     companion object {
@@ -51,27 +52,20 @@ class AlertActivity : AppCompatActivity() {
         /**
          * Create intent to launch this activity.
          */
-        fun createIntent(context: Context): Intent {
-            return Intent(context, AlertActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
+        fun createIntent(context: Context): Intent = Intent(context, AlertActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
         /**
          * Create intent from notification.
          */
-        fun createIntentFromNotification(
-            context: Context,
-            threatId: Long,
-            notificationId: Int
-        ): Intent {
-            return Intent(context, AlertActivity::class.java).apply {
+        fun createIntentFromNotification(context: Context, threatId: Long, notificationId: Int): Intent =
+            Intent(context, AlertActivity::class.java).apply {
                 action = AlertAction.ACTION_VIEW_THREAT
                 putExtra(AlertAction.EXTRA_THREAT_ID, threatId)
                 putExtra(AlertAction.EXTRA_NOTIFICATION_ID, notificationId)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
-        }
     }
 
     // Views (created programmatically for simplicity)
@@ -107,14 +101,13 @@ class AlertActivity : AppCompatActivity() {
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        android.R.id.home -> {
+            finish()
+            true
         }
+
+        else -> super.onOptionsItemSelected(item)
     }
 
     private fun setupUI() {
@@ -383,10 +376,10 @@ class AlertActivity : AppCompatActivity() {
             .setTitle("Resume Sync?")
             .setMessage(
                 "Are you sure you want to resume sync operations?\n\n" +
-                "Only do this if:\n" +
-                "- You've verified this was a false positive, OR\n" +
-                "- You've resolved the security issue\n\n" +
-                "Resuming sync will allow all pending files to be uploaded."
+                    "Only do this if:\n" +
+                    "- You've verified this was a false positive, OR\n" +
+                    "- You've resolved the security issue\n\n" +
+                    "Resuming sync will allow all pending files to be uploaded."
             )
             .setPositiveButton("Resume Sync") { _, _ ->
                 KillSwitchIntegration.reset()

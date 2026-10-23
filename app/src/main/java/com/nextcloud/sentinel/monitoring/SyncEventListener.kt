@@ -154,6 +154,7 @@ class KillSwitchSyncListener : SyncEventListener {
         syncResumedCallback = callback
     }
 
+    @Suppress("ReturnCount")
     override fun onFileAboutToSync(file: File): Boolean {
         // If KillSwitch is already triggered, block all syncs
         if (KillSwitchManager.isTriggered()) {
@@ -177,6 +178,7 @@ class KillSwitchSyncListener : SyncEventListener {
         return true
     }
 
+    @Suppress("ReturnCount")
     override fun onBatchAboutToSync(files: List<File>): List<File> {
         // If KillSwitch is triggered, block all
         if (KillSwitchManager.isTriggered()) {

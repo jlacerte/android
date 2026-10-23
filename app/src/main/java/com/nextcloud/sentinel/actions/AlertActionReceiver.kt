@@ -50,14 +50,17 @@ class AlertActionReceiver : BroadcastReceiver() {
             AlertAction.ACTION_DISMISS_THREAT -> {
                 handleDismiss(context, notificationId)
             }
+
             AlertAction.ACTION_RESUME_SYNC -> {
                 handleResume(context, notificationId)
             }
+
             AlertAction.ACTION_VIEW_THREAT -> {
                 // View threat is handled by PendingIntent to Activity
                 // This case is here for completeness if broadcast is used
                 Log.d(TAG, "View threat action - should open AlertActivity")
             }
+
             else -> {
                 Log.w(TAG, "Unknown action: ${intent.action}")
             }
