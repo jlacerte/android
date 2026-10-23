@@ -111,7 +111,7 @@ android {
             "TEST_SERVER_PASSWORD" to ncTestServerPassword.toString(),
             "disableAnalytics" to "true"
         )
-        applicationId = "com.nextcloud.client"
+        applicationId = "io.github.jlacerte.cardea"
         minSdk = 28
         targetSdk = 36
         compileSdk = 37
@@ -158,29 +158,29 @@ android {
         productFlavors {
             // used for f-droid
             register("generic") {
-                applicationId = "com.nextcloud.client"
+                applicationId = "io.github.jlacerte.cardea"
                 dimension = "default"
             }
 
             register("gplay") {
-                applicationId = "com.nextcloud.client"
+                applicationId = "io.github.jlacerte.cardea"
                 dimension = "default"
             }
 
             register("huawei") {
-                applicationId = "com.nextcloud.client"
+                applicationId = "io.github.jlacerte.cardea"
                 dimension = "default"
             }
 
             register("versionDev") {
-                applicationId = "com.nextcloud.android.beta"
+                applicationId = "io.github.jlacerte.cardea.beta"
                 dimension = "default"
                 versionCode = 20220322
                 versionName = "20220322"
             }
 
             register("qa") {
-                applicationId = "com.nextcloud.android.qa"
+                applicationId = "io.github.jlacerte.cardea.qa"
                 dimension = "default"
                 versionCode = 1
                 versionName = "1"
