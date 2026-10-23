@@ -612,6 +612,29 @@
             android:name="com.nextcloud.client.jobs.folderDownload.FolderDownloadWorkerReceiver"
             android:exported="false" />
 
+        <!-- Sentinel Kill Switch Components -->
+        <activity
+            android:name="com.nextcloud.sentinel.ui.KillSwitchSettingsActivity"
+            android:exported="false"
+            android:label="@string/killswitch_settings_title"
+            android:parentActivityName="com.owncloud.android.ui.activity.SettingsActivity" />
+
+        <activity
+            android:name="com.nextcloud.sentinel.ui.AlertActivity"
+            android:exported="false"
+            android:label="@string/killswitch_alert_title"
+            android:theme="@style/Theme.ownCloud.Dialog" />
+
+        <receiver
+            android:name="com.nextcloud.sentinel.actions.AlertActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.nextcloud.sentinel.DISMISS_THREAT" />
+                <action android:name="com.nextcloud.sentinel.RESUME_SYNC" />
+            </intent-filter>
+        </receiver>
+        <!-- End Sentinel Kill Switch Components -->
+
         <activity
             android:name=".ui.activity.CopyToClipboardActivity"
             android:exported="false"

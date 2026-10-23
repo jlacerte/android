@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Nextcloud Sentinel Android - Kill Switch Strings
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
+  ~ SPDX-License-Identifier: GPL-2.0-or-later
+-->
+<resources>
+
+    <!-- Kill Switch Settings -->
+    <string name="killswitch_settings_title">Kill Switch Protection</string>
+    <string name="killswitch_settings_summary">Ransomware detection and sync protection</string>
+    <string name="killswitch_category_title">Security</string>
+
+    <!-- Categories -->
+    <string name="killswitch_category_status">Protection Status</string>
+    <string name="killswitch_category_detectors">Detection Methods</string>
+    <string name="killswitch_category_actions">Actions</string>
+    <string name="killswitch_category_info">About</string>
+
+    <!-- Status Preferences -->
+    <string name="killswitch_enabled_title">Enable Kill Switch</string>
+    <string name="killswitch_enabled_summary">Detect and block ransomware attacks before files are synced</string>
+
+    <string name="killswitch_status_title">Current Status</string>
+    <string name="killswitch_status_active">Active - monitoring for threats</string>
+    <string name="killswitch_status_disabled">Disabled</string>
+    <string name="killswitch_status_triggered">ALERT: Threat detected - sync paused</string>
+
+    <string name="killswitch_threat_level_title">Threat Level</string>
+    <string name="killswitch_threat_level_none">None - All clear</string>
+    <string name="killswitch_threat_level_low">LOW - Minor anomaly</string>
+    <string name="killswitch_threat_level_medium">MEDIUM - Unusual patterns</string>
+    <string name="killswitch_threat_level_high">HIGH - Suspicious activity</string>
+    <string name="killswitch_threat_level_critical">CRITICAL - Ransomware detected!</string>
+
+    <!-- Detector Preferences -->
+    <string name="killswitch_entropy_title">Entropy Detection</string>
+    <string name="killswitch_entropy_summary">Detect encrypted/compressed files (ransomware signature)</string>
+
+    <string name="killswitch_mass_delete_title">Mass Delete Detection</string>
+    <string name="killswitch_mass_delete_summary">Detect bulk file deletions or modifications</string>
+
+    <string name="killswitch_canary_title">Canary Files</string>
+    <string name="killswitch_canary_summary">Use trap files to detect file system tampering</string>
+
+    <!-- Action Preferences -->
+    <string name="killswitch_reset_title">Reset Kill Switch</string>
+    <string name="killswitch_reset_summary">Clear threat state and resume sync (requires confirmation)</string>
+
+    <string name="killswitch_view_threats_title">View Threat Details</string>
+    <string name="killswitch_view_threats_summary">See detected threats and affected files</string>
+
+    <!-- Info -->
+    <string name="killswitch_about_title">About Kill Switch</string>
+    <string name="killswitch_about_summary">Kill Switch protects your cloud storage by detecting ransomware patterns and pausing sync before encrypted files are uploaded. This prevents ransomware from spreading through your Nextcloud.</string>
+
+    <!-- Alert Activity -->
+    <string name="killswitch_alert_title">Kill Switch Alert</string>
+    <string name="killswitch_alert_detected_by">Detected By</string>
+    <string name="killswitch_alert_description">Description</string>
+    <string name="killswitch_alert_timestamp">Detected At</string>
+    <string name="killswitch_alert_affected_files">Affected Files</string>
+    <string name="killswitch_alert_no_files">No specific files identified</string>
+    <string name="killswitch_alert_more_files">... and %d more files</string>
+    <string name="killswitch_alert_sync_paused">Sync is PAUSED for your protection</string>
+    <string name="killswitch_alert_sync_running">Sync is running normally</string>
+
+    <!-- Buttons -->
+    <string name="killswitch_button_dismiss">Dismiss</string>
+    <string name="killswitch_button_resume">Resume Sync</string>
+    <string name="killswitch_button_view_details">View Details</string>
+
+    <!-- Dialogs -->
+    <string name="killswitch_reset_dialog_title">Reset Kill Switch?</string>
+    <string name="killswitch_reset_dialog_message">Are you sure you want to reset Kill Switch protection?\n\nThis will resume sync operations. Only do this if you have verified the threat was a false positive or you have resolved the issue.</string>
+    <string name="killswitch_reset_dialog_confirm">Reset &amp; Resume Sync</string>
+    <string name="killswitch_reset_dialog_cancel">Cancel</string>
+
+    <string name="killswitch_resume_dialog_title">Resume Sync?</string>
+    <string name="killswitch_resume_dialog_message">Are you sure you want to resume sync operations?\n\nOnly do this if:\n- You\'ve verified this was a false positive, OR\n- You\'ve resolved the security issue\n\nResuming sync will allow all pending files to be uploaded.</string>
+
+    <!-- Notifications -->
+    <string name="killswitch_notification_channel_name">Kill Switch Alerts</string>
+    <string name="killswitch_notification_channel_description">Critical security alerts from Kill Switch protection</string>
+
+    <string name="killswitch_notification_title_critical">CRITICAL: Ransomware Detected!</string>
+    <string name="killswitch_notification_title_high">WARNING: Suspicious Activity</string>
+    <string name="killswitch_notification_title_medium">Alert: Unusual File Activity</string>
+    <string name="killswitch_notification_title_low">Notice: File Activity Detected</string>
+
+    <string name="killswitch_notification_sync_paused">Sync has been paused for your protection.</string>
+
+    <!-- Toast messages -->
+    <string name="killswitch_toast_sync_resumed">Sync resumed</string>
+    <string name="killswitch_toast_enabled">Kill Switch protection enabled</string>
+    <string name="killswitch_toast_disabled">Kill Switch protection disabled</string>
+
+</resources>

@@ -59,6 +59,7 @@ import com.nextcloud.client.preferences.AppPreferences;
 import com.nextcloud.client.preferences.AppPreferencesImpl;
 import com.nextcloud.client.preferences.DarkMode;
 import com.nextcloud.client.systembars.SystemBarBackgroundCallbacks;
+import com.nextcloud.sentinel.integration.KillSwitchIntegration;
 import com.nextcloud.ui.composeActivity.ComposeProcessTextAlias;
 import com.nextcloud.utils.extensions.ContextExtensionsKt;
 import com.nextcloud.utils.mdm.MDMConfig;
@@ -351,6 +352,9 @@ public class MainApp extends Application implements HasAndroidInjector, NetworkC
         initContactsBackup(accountManager, backgroundJobManager);
         notificationChannels();
 
+        // Initialize Sentinel Kill Switch for ransomware protection
+        initKillSwitch();
+
         if (backgroundJobManager != null) {
             backgroundJobManager.scheduleMediaFoldersDetectionJob();
             backgroundJobManager.startMediaFoldersDetectionJob();
@@ -511,6 +515,31 @@ public class MainApp extends Application implements HasAndroidInjector, NetworkC
             if (backgroundJobManager != null && arbitraryDataProvider.getBooleanValue(user, PREFERENCE_CONTACTS_AUTOMATIC_BACKUP)) {
                 backgroundJobManager.schedulePeriodicContactsBackup(user);
             }
+        }
+    }
+
+    /**
+     * Initialize Sentinel Kill Switch for ransomware protection.
+     * Monitors synced folders for suspicious activity (high entropy files,
+     * mass deletions, canary file modifications).
+     */
+    private void initKillSwitch() {
+        try {
+            // Get synced folder paths from provider
+            List<String> syncFolderPaths = new ArrayList<>();
+            if (syncedFolderProvider != null) {
+                for (SyncedFolder folder : syncedFolderProvider.getSyncedFolders()) {
+                    if (folder.isEnabled()) {
+                        syncFolderPaths.add(folder.getLocalPath());
+                    }
+                }
+            }
+
+            // Initialize Kill Switch with monitored paths
+            KillSwitchIntegration.initialize(this, syncFolderPaths);
+            Log_OC.i(TAG, "Sentinel Kill Switch initialized with " + syncFolderPaths.size() + " monitored folders");
+        } catch (Exception e) {
+            Log_OC.e(TAG, "Failed to initialize Sentinel Kill Switch: " + e.getMessage());
         }
     }
 

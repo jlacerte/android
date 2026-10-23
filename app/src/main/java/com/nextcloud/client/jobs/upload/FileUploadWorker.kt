@@ -24,6 +24,7 @@ import com.nextcloud.client.jobs.autoUpload.SyncFolderHelper
 import com.nextcloud.client.jobs.utils.UploadErrorNotificationManager
 import com.nextcloud.client.network.ConnectivityService
 import com.nextcloud.client.preferences.AppPreferences
+import com.nextcloud.sentinel.integration.KillSwitchIntegration
 import com.nextcloud.utils.ForegroundServiceHelper
 import com.nextcloud.utils.extensions.getPercent
 import com.nextcloud.utils.extensions.isNonRetryable
@@ -321,6 +322,14 @@ class FileUploadWorker(
                     intents.openUploadListIntent(null)
                 )
                 return@withContext Result.success()
+            }
+
+            // Sentinel Kill Switch check - block uploads if threat detected
+            val uploadFile = File(upload.localPath)
+            if (!KillSwitchIntegration.shouldAllowUpload(uploadFile)) {
+                Log_OC.w(TAG, "Kill Switch blocked upload: ${upload.localPath}")
+                // Skip this file but continue with others
+                continue
             }
 
             if (canExitEarly()) {

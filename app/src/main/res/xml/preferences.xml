@@ -86,6 +86,16 @@
             android:summary="@string/prefs_all_files_access_summary" />
     </PreferenceCategory>
 
+    <!-- Sentinel Kill Switch -->
+    <PreferenceCategory
+        android:title="@string/killswitch_category_title"
+        android:key="killswitch_category">
+        <Preference
+            android:title="@string/killswitch_settings_title"
+            android:key="killswitch_settings"
+            android:summary="@string/killswitch_settings_summary" />
+    </PreferenceCategory>
+
 	<PreferenceCategory
         android:title="@string/prefs_category_more"
         android:key="more">

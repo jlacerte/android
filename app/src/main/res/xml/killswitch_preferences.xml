@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Nextcloud Sentinel Android - Kill Switch Preferences
+  ~
+  ~ SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
+  ~ SPDX-License-Identifier: GPL-2.0-or-later
+-->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Main Status Category -->
+    <PreferenceCategory
+        android:title="@string/killswitch_category_status"
+        android:key="killswitch_status_category">
+
+        <SwitchPreferenceCompat
+            android:key="killswitch_enabled"
+            android:title="@string/killswitch_enabled_title"
+            android:summary="@string/killswitch_enabled_summary"
+            android:defaultValue="true"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="killswitch_status"
+            android:title="@string/killswitch_status_title"
+            android:summary="@string/killswitch_status_active"
+            android:selectable="false"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="killswitch_threat_level"
+            android:title="@string/killswitch_threat_level_title"
+            android:summary="@string/killswitch_threat_level_none"
+            android:selectable="false"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <!-- Detectors Category -->
+    <PreferenceCategory
+        android:title="@string/killswitch_category_detectors"
+        android:key="killswitch_detectors_category">
+
+        <SwitchPreferenceCompat
+            android:key="killswitch_entropy_enabled"
+            android:title="@string/killswitch_entropy_title"
+            android:summary="@string/killswitch_entropy_summary"
+            android:defaultValue="true"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="killswitch_mass_delete_enabled"
+            android:title="@string/killswitch_mass_delete_title"
+            android:summary="@string/killswitch_mass_delete_summary"
+            android:defaultValue="true"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="killswitch_canary_enabled"
+            android:title="@string/killswitch_canary_title"
+            android:summary="@string/killswitch_canary_summary"
+            android:defaultValue="false"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <!-- Actions Category -->
+    <PreferenceCategory
+        android:title="@string/killswitch_category_actions"
+        android:key="killswitch_actions_category">
+
+        <Preference
+            android:key="killswitch_reset"
+            android:title="@string/killswitch_reset_title"
+            android:summary="@string/killswitch_reset_summary"
+            android:enabled="false"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="killswitch_view_threats"
+            android:title="@string/killswitch_view_threats_title"
+            android:summary="@string/killswitch_view_threats_summary"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <!-- Info Category -->
+    <PreferenceCategory
+        android:title="@string/killswitch_category_info"
+        android:key="killswitch_info_category">
+
+        <Preference
+            android:key="killswitch_about"
+            android:title="@string/killswitch_about_title"
+            android:summary="@string/killswitch_about_summary"
+            android:selectable="false"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

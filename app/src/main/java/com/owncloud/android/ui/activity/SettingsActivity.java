@@ -53,6 +53,7 @@ import com.nextcloud.client.preferences.AppPreferences;
 import com.nextcloud.client.preferences.AppPreferencesImpl;
 import com.nextcloud.client.preferences.DarkMode;
 import com.nextcloud.client.utils.IntentUtil;
+import com.nextcloud.sentinel.ui.KillSwitchSettingsActivity;
 import com.nextcloud.utils.SnackbarUtil;
 import com.nextcloud.utils.extensions.ContextExtensionsKt;
 import com.nextcloud.utils.mdm.MDMConfig;
@@ -197,6 +198,9 @@ public class SettingsActivity extends PreferenceActivity
 
         // More
         setupMoreCategory();
+
+        // Kill Switch (Sentinel)
+        setupKillSwitchCategory();
 
         // About
         setupAboutCategory(appVersion);
@@ -393,6 +397,26 @@ public class SettingsActivity extends PreferenceActivity
         setupImprintPreference(preferenceCategoryMore);
 
         loadExternalSettingLinks(preferenceCategoryMore);
+    }
+
+    /**
+     * Setup Kill Switch (Sentinel) preferences category.
+     * Opens the KillSwitchSettingsFragment when clicked.
+     */
+    private void setupKillSwitchCategory() {
+        final PreferenceCategory preferenceCategoryKillSwitch = (PreferenceCategory) findPreference("killswitch_category");
+        if (preferenceCategoryKillSwitch != null) {
+            viewThemeUtils.files.themePreferenceCategory(preferenceCategoryKillSwitch);
+        }
+
+        Preference pKillSwitch = findPreference("killswitch_settings");
+        if (pKillSwitch != null) {
+            pKillSwitch.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(SettingsActivity.this, KillSwitchSettingsActivity.class);
+                startActivity(intent);
+                return true;
+            });
+        }
     }
 
     private void setupImprintPreference(PreferenceCategory preferenceCategoryMore) {
