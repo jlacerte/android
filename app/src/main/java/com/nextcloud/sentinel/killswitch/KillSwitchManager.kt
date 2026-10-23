@@ -10,8 +10,6 @@
 
 package com.nextcloud.sentinel.killswitch
 
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,10 +41,22 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Thread Safety:
  *   All public methods are thread-safe using @Synchronized.
  *   Event lists use CopyOnWriteArrayList for concurrent access.
+ *   Events are emitted with tryEmit on buffered flows, so no Looper is needed
+ *   and the manager can be exercised in plain JVM unit tests.
  */
+@Suppress("TooManyFunctions")
 object KillSwitchManager {
 
     private const val TAG = "KillSwitchManager"
+
+    private const val DEFAULT_DELETE_THRESHOLD = 10
+    private const val DEFAULT_WINDOW_SECONDS = 60
+    private const val DEFAULT_ENTROPY_THRESHOLD = 7.5
+    private const val MILLIS_PER_SECOND = 1000L
+    private const val EVENT_BUFFER_CAPACITY = 64
+    private const val HIGH_RATIO = 0.7
+    private const val MEDIUM_RATIO = 0.5
+    private const val LOW_RATIO = 0.3
 
     // State flows for reactive UI
     private val _enabled = MutableStateFlow(true)
@@ -59,13 +69,13 @@ object KillSwitchManager {
     val threatLevel: StateFlow<ThreatLevel> = _threatLevel.asStateFlow()
 
     // Event flows for observers
-    private val _threatDetected = MutableSharedFlow<ThreatInfo>()
+    private val _threatDetected = MutableSharedFlow<ThreatInfo>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
     val threatDetected: SharedFlow<ThreatInfo> = _threatDetected.asSharedFlow()
 
-    private val _syncPaused = MutableSharedFlow<String>()
+    private val _syncPaused = MutableSharedFlow<String>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
     val syncPaused: SharedFlow<String> = _syncPaused.asSharedFlow()
 
-    private val _syncResumed = MutableSharedFlow<Unit>()
+    private val _syncResumed = MutableSharedFlow<Unit>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
     val syncResumed: SharedFlow<Unit> = _syncResumed.asSharedFlow()
 
     // Registered components
@@ -79,32 +89,18 @@ object KillSwitchManager {
     private val recentEvents = CopyOnWriteArrayList<FileEvent>()
 
     // Configuration
-    var deleteThreshold: Int = 10
+    var deleteThreshold: Int = DEFAULT_DELETE_THRESHOLD
         @Synchronized set
-    var windowSeconds: Int = 60
+
+    var windowSeconds: Int = DEFAULT_WINDOW_SECONDS
         @Synchronized set
-    var entropyThreshold: Double = 7.5
+
+    var entropyThreshold: Double = DEFAULT_ENTROPY_THRESHOLD
         @Synchronized set
+
     var autoBackup: Boolean = true
         @Synchronized set
 
-    // Window cleanup handler
-    private val handler = Handler(Looper.getMainLooper())
-    private val windowCleanupRunnable = object : Runnable {
-        override fun run() {
-            cleanupExpiredEvents()
-            handler.postDelayed(this, 1000) // Every second
-        }
-    }
-
-    init {
-        Log.i(TAG, "Kill Switch Manager initialized")
-        handler.post(windowCleanupRunnable)
-    }
-
-    /**
-     * Enable or disable kill switch protection
-     */
     @Synchronized
     fun setEnabled(enabled: Boolean) {
         if (_enabled.value != enabled) {
@@ -113,117 +109,88 @@ object KillSwitchManager {
         }
     }
 
-    /**
-     * Check if kill switch is enabled
-     */
     fun isEnabled(): Boolean = _enabled.value
 
-    /**
-     * Check if kill switch has been triggered
-     */
     fun isTriggered(): Boolean = _triggered.value
 
-    /**
-     * Get current threat level
-     */
     fun currentThreatLevel(): ThreatLevel = _threatLevel.value
 
-    /**
-     * Register a threat detector
-     */
     @Synchronized
     fun registerDetector(detector: ThreatDetector) {
         detectors.add(detector)
         Log.i(TAG, "Registered detector: ${detector.name}")
     }
 
-    /**
-     * Register a sync action to execute on threat detection
-     */
+    @Synchronized
+    fun unregisterDetector(detector: ThreatDetector) {
+        detectors.remove(detector)
+    }
+
+    @Synchronized
+    fun clearDetectors() {
+        detectors.clear()
+    }
+
     @Synchronized
     fun registerAction(action: SyncAction) {
         actions.add(action)
         Log.i(TAG, "Registered action: ${action.name}")
     }
 
+    @Synchronized
+    fun clearActions() {
+        actions.clear()
+    }
+
     /**
-     * Analyze a file for threats
-     * @param file The file to analyze
-     * @param eventType The type of file operation
-     * @return true if the operation should be blocked
+     * Analyze a single file event.
+     *
+     * @return true if the operation must be blocked (Kill Switch triggered).
      */
     @Synchronized
     fun analyzeFile(file: File, eventType: FileEvent.EventType): Boolean {
         if (!_enabled.value || _triggered.value) {
-            return _triggered.value // Block if already triggered
+            return _triggered.value
         }
 
-        // Record the event
         recordEvent(eventType, file.absolutePath)
 
-        // Run through all detectors
-        for (detector in detectors) {
-            if (!detector.enabled) continue
+        val blocked = detectors
+            .filter { it.enabled }
+            .any { detector -> handleThreat(detector.analyze(file, eventType, recentEvents.toList())) }
 
-            val threat = detector.analyze(file, eventType, recentEvents.toList())
-
-            if (threat.level != ThreatLevel.NONE) {
-                threats.add(threat)
-
-                Log.w(TAG, "Threat detected by ${threat.detectorName} " +
-                        "- Level: ${threat.level} - ${threat.description}")
-
-                // Emit threat event
-                handler.post {
-                    _threatDetected.tryEmit(threat)
-                }
-
-                if (threat.level.isActionable()) {
-                    trigger(threat.description)
-                    return true // Block this operation
-                }
-            }
+        if (!blocked) {
+            evaluateThreatLevel()
         }
-
-        evaluateThreatLevel()
-        return false
+        return blocked
     }
 
     /**
-     * Analyze a batch of files
-     * @param files List of file paths with event types
-     * @return true if sync should be paused
+     * Analyze a batch of file events, e.g. a whole upload queue.
+     *
+     * @return true if the batch must be blocked (Kill Switch triggered).
      */
     @Synchronized
     fun analyzeBatch(files: List<Pair<File, FileEvent.EventType>>): Boolean {
-        if (!_enabled.value) return false
+        if (!_enabled.value) {
+            return false
+        }
 
-        // Count deletions in batch
         val deleteCount = files.count { it.second == FileEvent.EventType.DELETE }
-
-        // Immediate trigger on massive batch deletion
-        if (deleteCount > deleteThreshold * 2) {
+        val blocked = if (deleteCount > deleteThreshold * 2) {
             trigger("Massive batch deletion detected: $deleteCount files")
-            return true
+            true
+        } else {
+            files.any { (file, eventType) -> analyzeFile(file, eventType) }
         }
-
-        // Analyze each file
-        for ((file, eventType) in files) {
-            if (analyzeFile(file, eventType)) {
-                return true
-            }
-        }
-
-        return _triggered.value
+        return blocked || _triggered.value
     }
 
-    /**
-     * Manually trigger the kill switch
-     * @param reason The reason for triggering
-     */
     @Synchronized
     fun trigger(reason: String) {
-        if (_triggered.value) return // Already triggered
+        if (_triggered.value) {
+            return
+        }
 
         _triggered.value = true
         _threatLevel.value = ThreatLevel.CRITICAL
@@ -231,7 +198,6 @@ object KillSwitchManager {
         Log.e(TAG, "!!! KILL SWITCH TRIGGERED !!!")
         Log.e(TAG, "Reason: $reason")
 
-        // Create threat info for this trigger
         val threat = ThreatInfo(
             level = ThreatLevel.CRITICAL,
             detectorName = "KillSwitchManager",
@@ -239,18 +205,10 @@ object KillSwitchManager {
             affectedFiles = emptyList()
         )
 
-        // Execute all registered actions
         executeActions(threat)
-
-        // Emit events
-        handler.post {
-            _syncPaused.tryEmit(reason)
-        }
+        _syncPaused.tryEmit(reason)
     }
 
-    /**
-     * Reset the kill switch after user confirmation
-     */
     @Synchronized
     fun reset() {
         _triggered.value = false
@@ -258,78 +216,78 @@ object KillSwitchManager {
         threats.clear()
         recentEvents.clear()
 
-        // Reset all detectors
         detectors.forEach { it.reset() }
 
         Log.i(TAG, "Kill Switch reset by user")
-
-        handler.post {
-            _syncResumed.tryEmit(Unit)
-        }
+        _syncResumed.tryEmit(Unit)
     }
 
-    /**
-     * Get the list of detected threats
-     */
     fun getThreats(): List<ThreatInfo> = threats.toList()
 
-    /**
-     * Get registered detectors
-     */
     fun getDetectors(): List<ThreatDetector> = detectors.toList()
 
-    /**
-     * Get recent events (for debugging)
-     */
+    fun getActions(): List<SyncAction> = actions.toList()
+
     fun getRecentEvents(): List<FileEvent> = recentEvents.toList()
 
-    /**
-     * Cleanup: call when shutting down
-     */
     fun shutdown() {
-        handler.removeCallbacks(windowCleanupRunnable)
         Log.i(TAG, "Kill Switch Manager shutdown")
     }
 
-    // Private implementation
+    private fun handleThreat(threat: ThreatInfo): Boolean {
+        if (threat.level == ThreatLevel.NONE) {
+            return false
+        }
+
+        threats.add(threat)
+        Log.w(TAG, "Threat detected by ${threat.detectorName} - Level: ${threat.level} - ${threat.description}")
+        _threatDetected.tryEmit(threat)
+
+        val actionable = threat.level.isActionable()
+        if (actionable) {
+            trigger(threat.description)
+        }
+        return actionable
+    }
 
     private fun recordEvent(eventType: FileEvent.EventType, path: String) {
-        val event = FileEvent(
-            path = path,
-            eventType = eventType,
-            timestamp = System.currentTimeMillis()
+        cleanupExpiredEvents()
+        recentEvents.add(
+            FileEvent(
+                path = path,
+                eventType = eventType,
+                timestamp = System.currentTimeMillis()
+            )
         )
-        recentEvents.add(event)
     }
 
     private fun cleanupExpiredEvents() {
-        val cutoff = System.currentTimeMillis() - (windowSeconds * 1000L)
+        val cutoff = System.currentTimeMillis() - (windowSeconds * MILLIS_PER_SECOND)
         recentEvents.removeAll { it.timestamp < cutoff }
     }
 
     private fun evaluateThreatLevel() {
-        // Count recent deletions
         val deleteCount = recentEvents.count {
             it.eventType == FileEvent.EventType.DELETE
         }
 
         val newLevel = when {
             deleteCount >= deleteThreshold -> ThreatLevel.CRITICAL
-            deleteCount >= (deleteThreshold * 0.7).toInt() -> ThreatLevel.HIGH
-            deleteCount >= (deleteThreshold * 0.5).toInt() -> ThreatLevel.MEDIUM
-            deleteCount >= (deleteThreshold * 0.3).toInt() -> ThreatLevel.LOW
+            deleteCount >= (deleteThreshold * HIGH_RATIO).toInt() -> ThreatLevel.HIGH
+            deleteCount >= (deleteThreshold * MEDIUM_RATIO).toInt() -> ThreatLevel.MEDIUM
+            deleteCount >= (deleteThreshold * LOW_RATIO).toInt() -> ThreatLevel.LOW
             else -> ThreatLevel.NONE
         }
 
         if (newLevel != _threatLevel.value) {
             _threatLevel.value = newLevel
-
             if (newLevel >= ThreatLevel.CRITICAL && !_triggered.value) {
                 trigger("Deletion threshold exceeded: $deleteCount files in $windowSeconds seconds")
             }
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun executeActions(threat: ThreatInfo) {
         for (action in actions) {
             Log.i(TAG, "Executing action: ${action.name}")
@@ -343,7 +301,7 @@ object KillSwitchManager {
 }
 
 /**
- * Interface for sync actions executed on threat detection
+ * Response action executed when the Kill Switch triggers.
  */
 interface SyncAction {
     val name: String
