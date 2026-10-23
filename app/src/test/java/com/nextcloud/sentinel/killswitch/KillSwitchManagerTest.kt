@@ -1,5 +1,5 @@
 /*
- * Nextcloud Sentinel Android - Kill Switch Manager Tests
+ * Nextcloud Sentinel Android - Kill Switch Tests
  *
  * SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -9,27 +9,22 @@ package com.nextcloud.sentinel.killswitch
 
 import com.nextcloud.sentinel.killswitch.detectors.EntropyDetector
 import com.nextcloud.sentinel.killswitch.detectors.MassDeleteDetector
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.security.SecureRandom
-import java.time.Instant
 
-/**
- * Unit tests for KillSwitchManager.
- *
- * Tests the central coordinator for threat detection and response.
- */
+@Suppress("TooManyFunctions")
 class KillSwitchManagerTest {
 
     @get:Rule
@@ -37,7 +32,6 @@ class KillSwitchManagerTest {
 
     @Before
     fun setUp() {
-        // Reset manager state before each test
         KillSwitchManager.reset()
         KillSwitchManager.clearDetectors()
         KillSwitchManager.clearActions()
@@ -51,376 +45,198 @@ class KillSwitchManagerTest {
         KillSwitchManager.clearActions()
     }
 
-    // ==================== Enable/Disable Tests ====================
-
     @Test
-    fun `setEnabled changes enabled state`() {
+    fun `setEnabled changes the enabled state and its flow`() {
         KillSwitchManager.setEnabled(false)
         assertFalse(KillSwitchManager.isEnabled())
+        assertFalse(KillSwitchManager.enabled.value)
 
         KillSwitchManager.setEnabled(true)
         assertTrue(KillSwitchManager.isEnabled())
+        assertTrue(KillSwitchManager.enabled.value)
     }
 
     @Test
-    fun `enabled state is observable via flow`() = runBlocking {
-        KillSwitchManager.setEnabled(false)
-        assertEquals(false, KillSwitchManager.enabled.first())
+    fun `detectors can be registered, unregistered and cleared`() {
+        val entropy = EntropyDetector()
+        val massDelete = MassDeleteDetector()
 
-        KillSwitchManager.setEnabled(true)
-        assertEquals(true, KillSwitchManager.enabled.first())
-    }
+        KillSwitchManager.registerDetector(entropy)
+        KillSwitchManager.registerDetector(massDelete)
+        assertEquals(listOf(entropy, massDelete), KillSwitchManager.getDetectors())
 
-    // ==================== Detector Registration Tests ====================
+        KillSwitchManager.unregisterDetector(entropy)
+        assertEquals(listOf(massDelete), KillSwitchManager.getDetectors())
 
-    @Test
-    fun `registerDetector adds detector`() {
-        val detector = EntropyDetector()
-        KillSwitchManager.registerDetector(detector)
-
-        assertTrue(KillSwitchManager.getDetectors().contains(detector))
-    }
-
-    @Test
-    fun `unregisterDetector removes detector`() {
-        val detector = EntropyDetector()
-        KillSwitchManager.registerDetector(detector)
-        KillSwitchManager.unregisterDetector(detector)
-
-        assertFalse(KillSwitchManager.getDetectors().contains(detector))
-    }
-
-    @Test
-    fun `clearDetectors removes all detectors`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-        KillSwitchManager.registerDetector(MassDeleteDetector())
         KillSwitchManager.clearDetectors()
-
         assertTrue(KillSwitchManager.getDetectors().isEmpty())
     }
 
-    // ==================== Action Registration Tests ====================
-
     @Test
-    fun `registerAction adds action`() {
-        val action = TestAction()
+    fun `actions can be registered and cleared`() {
+        val action = RecordingAction()
+
         KillSwitchManager.registerAction(action)
+        assertEquals(listOf(action), KillSwitchManager.getActions())
 
-        assertTrue(KillSwitchManager.getActions().contains(action))
-    }
-
-    @Test
-    fun `clearActions removes all actions`() {
-        KillSwitchManager.registerAction(TestAction())
-        KillSwitchManager.registerAction(TestAction())
         KillSwitchManager.clearActions()
-
         assertTrue(KillSwitchManager.getActions().isEmpty())
     }
 
-    // ==================== File Analysis Tests ====================
-
     @Test
-    fun `analyzeFile returns false when disabled`() {
+    fun `analyzeFile does nothing when disabled`() {
         KillSwitchManager.setEnabled(false)
         KillSwitchManager.registerDetector(EntropyDetector())
 
-        val file = createHighEntropyFile("test.dat")
-        val result = KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
+        val blocked = KillSwitchManager.analyzeFile(highEntropyFile("test.dat"), FileEvent.EventType.MODIFY)
 
-        assertFalse("Should not analyze when disabled", result)
+        assertFalse(blocked)
+        assertFalse(KillSwitchManager.isTriggered())
+        assertTrue(KillSwitchManager.getRecentEvents().isEmpty())
     }
 
     @Test
-    fun `analyzeFile returns false for no threat`() {
+    fun `analyzeFile allows a normal file and records the event`() {
         KillSwitchManager.registerDetector(EntropyDetector())
+        val file = SentinelTestFiles.textFile(tempFolder.root, "normal.txt")
 
-        val file = createNormalTextFile("normal.txt")
-        val result = KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
+        val blocked = KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
 
-        assertFalse("Normal file should not trigger", result)
+        assertFalse(blocked)
+        assertEquals(ThreatLevel.NONE, KillSwitchManager.threatLevel.value)
+        assertEquals(listOf(file.absolutePath), KillSwitchManager.getRecentEvents().map { it.path })
     }
 
     @Test
-    fun `analyzeFile returns true for detected threat`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("encrypted.dat")
-        val result = KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        assertTrue("High entropy file should trigger", result)
-    }
-
-    @Test
-    fun `analyzeFile executes actions on threat`() {
-        val action = TestAction()
+    fun `an actionable threat blocks, triggers, runs actions and is recorded`() {
+        val action = RecordingAction()
         KillSwitchManager.registerDetector(EntropyDetector())
         KillSwitchManager.registerAction(action)
+        val file = highEntropyFile("encrypted.dat")
 
-        val file = createHighEntropyFile("malicious.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
+        val blocked = KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
 
-        assertTrue("Action should be executed", action.wasExecuted)
-    }
-
-    @Test
-    fun `analyzeFile sets triggered state on threat`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        assertFalse(KillSwitchManager.isTriggered())
-
-        val file = createHighEntropyFile("threat.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
+        assertTrue(blocked)
         assertTrue(KillSwitchManager.isTriggered())
-    }
-
-    // ==================== Batch Analysis Tests ====================
-
-    @Test
-    fun `analyzeBatch processes multiple files`() {
-        val massDeleteDetector = MassDeleteDetector(
-            deleteCountThreshold = 5,
-            deleteRateThreshold = 100.0,
-            timeWindowMs = 60000
-        )
-        KillSwitchManager.registerDetector(massDeleteDetector)
-
-        val batch = (1..10).map { i ->
-            val file = tempFolder.newFile("file$i.txt")
-            file to FileEvent.EventType.DELETE
-        }
-
-        val triggered = KillSwitchManager.analyzeBatch(batch)
-
-        assertTrue("Batch delete should trigger", triggered)
+        assertTrue(KillSwitchManager.triggered.value)
+        assertEquals(ThreatLevel.CRITICAL, KillSwitchManager.threatLevel.value)
+        assertEquals(1, action.executions.size)
+        assertEquals(listOf(file.absolutePath), KillSwitchManager.getThreats().single().affectedFiles)
     }
 
     @Test
-    fun `analyzeBatch returns false for safe batch`() {
+    fun `once triggered every file is blocked until reset`() {
         KillSwitchManager.registerDetector(EntropyDetector())
+        KillSwitchManager.analyzeFile(highEntropyFile("trigger.dat"), FileEvent.EventType.MODIFY)
+        val normal = SentinelTestFiles.textFile(tempFolder.root, "normal.txt")
 
-        val batch = (1..5).map { i ->
-            val file = createNormalTextFile("safe$i.txt")
-            file to FileEvent.EventType.MODIFY
-        }
-
-        val triggered = KillSwitchManager.analyzeBatch(batch)
-
-        assertFalse("Safe batch should not trigger", triggered)
-    }
-
-    // ==================== Threat Level Tests ====================
-
-    @Test
-    fun `threatLevel updates on detection`() = runBlocking {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        assertEquals(ThreatLevel.NONE, KillSwitchManager.threatLevel.value)
-
-        val file = createHighEntropyFile("critical.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        assertTrue(KillSwitchManager.threatLevel.value >= ThreatLevel.HIGH)
-    }
-
-    @Test
-    fun `threatLevel resets after reset call`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("trigger.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-        assertTrue(KillSwitchManager.threatLevel.value >= ThreatLevel.HIGH)
-
-        KillSwitchManager.reset()
-
-        assertEquals(ThreatLevel.NONE, KillSwitchManager.threatLevel.value)
-    }
-
-    // ==================== Threat History Tests ====================
-
-    @Test
-    fun `getThreatHistory returns detected threats`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        assertTrue(KillSwitchManager.getThreatHistory().isEmpty())
-
-        val file = createHighEntropyFile("threat1.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        assertTrue(KillSwitchManager.getThreatHistory().isNotEmpty())
-    }
-
-    @Test
-    fun `threat history contains threat details`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("detailed.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        val history = KillSwitchManager.getThreatHistory()
-        assertNotNull(history.firstOrNull())
-        assertTrue(history.first().affectedFiles.contains(file.absolutePath))
-    }
-
-    // ==================== Reset Tests ====================
-
-    @Test
-    fun `reset clears triggered state`() {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("threat.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-        assertTrue(KillSwitchManager.isTriggered())
+        assertTrue(KillSwitchManager.analyzeFile(normal, FileEvent.EventType.MODIFY))
 
         KillSwitchManager.reset()
 
         assertFalse(KillSwitchManager.isTriggered())
+        assertEquals(ThreatLevel.NONE, KillSwitchManager.threatLevel.value)
+        assertTrue(KillSwitchManager.getThreats().isEmpty())
+        assertFalse(KillSwitchManager.analyzeFile(normal, FileEvent.EventType.MODIFY))
     }
 
     @Test
-    fun `reset resets detectors`() {
-        val detector = MassDeleteDetector()
-        KillSwitchManager.registerDetector(detector)
+    fun `a non-actionable threat is recorded without triggering`() {
+        KillSwitchManager.registerDetector(FixedDetector("Medium", ThreatLevel.MEDIUM))
 
-        // Add some deletes
-        for (i in 1..5) {
-            val file = tempFolder.newFile("del$i.txt")
-            KillSwitchManager.analyzeFile(file, FileEvent.EventType.DELETE)
+        val blocked = KillSwitchManager.analyzeFile(tempFolder.newFile("file.txt"), FileEvent.EventType.MODIFY)
+
+        assertFalse(blocked)
+        assertFalse(KillSwitchManager.isTriggered())
+        assertEquals(1, KillSwitchManager.getThreats().size)
+    }
+
+    @Test
+    fun `mass deletion triggers through the shared event window`() {
+        KillSwitchManager.registerDetector(MassDeleteDetector())
+
+        repeat(MassDeleteDetector.DEFAULT_THRESHOLD - 1) { index ->
+            assertFalse(
+                KillSwitchManager.analyzeFile(File(tempFolder.root, "del$index.txt"), FileEvent.EventType.DELETE)
+            )
         }
+        assertFalse(KillSwitchManager.isTriggered())
 
-        assertTrue(detector.getDeleteCountInWindow() > 0)
+        assertTrue(KillSwitchManager.analyzeFile(File(tempFolder.root, "last.txt"), FileEvent.EventType.DELETE))
+        assertTrue(KillSwitchManager.isTriggered())
+    }
 
+    @Test
+    fun `analyzeBatch triggers on a massive deletion and allows a safe batch`() {
+        KillSwitchManager.registerDetector(EntropyDetector())
+        val safeBatch = (1..5).map { index ->
+            SentinelTestFiles.textFile(tempFolder.root, "safe$index.txt") to FileEvent.EventType.MODIFY
+        }
+        assertFalse(KillSwitchManager.analyzeBatch(safeBatch))
+
+        val deletions = (1..(KillSwitchManager.deleteThreshold * 2 + 1)).map { index ->
+            File(tempFolder.root, "gone$index.txt") to FileEvent.EventType.DELETE
+        }
+        assertTrue(KillSwitchManager.analyzeBatch(deletions))
+        assertTrue(KillSwitchManager.isTriggered())
+    }
+
+    @Test
+    fun `threatDetected and syncPaused are emitted on trigger and syncResumed on reset`() = runBlocking {
+        KillSwitchManager.registerDetector(EntropyDetector())
+        val threat = async(start = CoroutineStart.UNDISPATCHED) { KillSwitchManager.threatDetected.first() }
+        val paused = async(start = CoroutineStart.UNDISPATCHED) { KillSwitchManager.syncPaused.first() }
+        val resumed = async(start = CoroutineStart.UNDISPATCHED) { KillSwitchManager.syncResumed.first() }
+
+        KillSwitchManager.analyzeFile(highEntropyFile("emitted.dat"), FileEvent.EventType.MODIFY)
         KillSwitchManager.reset()
 
-        assertEquals(0, detector.getDeleteCountInWindow())
-    }
-
-    @Test
-    fun `reset emits syncResumed event`() = runBlocking {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("trigger.dat")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        // Reset should emit syncResumed
-        val resumed = withTimeoutOrNull(1000) {
-            KillSwitchManager.reset()
-            KillSwitchManager.syncResumed.first()
+        withTimeout(1000) {
+            assertEquals("EntropyDetector", threat.await().detectorName)
+            assertTrue(paused.await().contains("entropy"))
+            resumed.await()
         }
-
-        assertNotNull("Should emit syncResumed", resumed)
-    }
-
-    // ==================== Flow Events Tests ====================
-
-    @Test
-    fun `threatDetected flow emits on detection`() = runBlocking {
-        KillSwitchManager.registerDetector(EntropyDetector())
-
-        val file = createHighEntropyFile("emitted.dat")
-
-        val threat = withTimeoutOrNull(1000) {
-            KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-            KillSwitchManager.threatDetected.first()
-        }
-
-        assertNotNull("Should emit threatDetected", threat)
     }
 
     @Test
-    fun `syncPaused flow emits on trigger`() = runBlocking {
-        KillSwitchManager.registerDetector(EntropyDetector())
+    fun `detectors run in order and the first actionable threat stops the analysis`() {
+        val first = FixedDetector("First", ThreatLevel.NONE)
+        val second = FixedDetector("Second", ThreatLevel.CRITICAL)
+        val third = FixedDetector("Third", ThreatLevel.NONE)
+        listOf(first, second, third).forEach { KillSwitchManager.registerDetector(it) }
 
-        val file = createHighEntropyFile("pause.dat")
+        KillSwitchManager.analyzeFile(tempFolder.newFile("multi.txt"), FileEvent.EventType.MODIFY)
 
-        val paused = withTimeoutOrNull(1000) {
-            KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-            KillSwitchManager.syncPaused.first()
-        }
-
-        assertNotNull("Should emit syncPaused", paused)
+        assertEquals(1, first.calls)
+        assertEquals(1, second.calls)
+        assertEquals(0, third.calls)
     }
 
-    // ==================== Multiple Detectors Tests ====================
+    private fun highEntropyFile(name: String): File = SentinelTestFiles.highEntropyFile(tempFolder.root, name)
 
-    @Test
-    fun `multiple detectors are all invoked`() {
-        val detector1 = TestDetector("Detector1")
-        val detector2 = TestDetector("Detector2")
-        KillSwitchManager.registerDetector(detector1)
-        KillSwitchManager.registerDetector(detector2)
-
-        val file = tempFolder.newFile("multi.txt")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        assertTrue("Detector1 should be called", detector1.wasCalled)
-        assertTrue("Detector2 should be called", detector2.wasCalled)
-    }
-
-    @Test
-    fun `first threat stops further detection`() {
-        val detector1 = TestDetector("Detector1", threatLevel = ThreatLevel.CRITICAL)
-        val detector2 = TestDetector("Detector2")
-        KillSwitchManager.registerDetector(detector1)
-        KillSwitchManager.registerDetector(detector2)
-
-        val file = tempFolder.newFile("stop.txt")
-        KillSwitchManager.analyzeFile(file, FileEvent.EventType.MODIFY)
-
-        // First detector triggers, second may or may not be called
-        // depending on implementation (early exit or not)
-        assertTrue("Detector1 should be called", detector1.wasCalled)
-    }
-
-    // ==================== Helper Methods ====================
-
-    private fun createNormalTextFile(name: String): File {
-        val file = File(tempFolder.root, name)
-        file.writeText("Normal text content.\n".repeat(1000))
-        return file
-    }
-
-    private fun createHighEntropyFile(name: String): File {
-        val file = File(tempFolder.root, name)
-        val random = SecureRandom()
-        val data = ByteArray(100000)
-        random.nextBytes(data)
-        file.writeBytes(data)
-        return file
-    }
-
-    // ==================== Test Doubles ====================
-
-    private class TestAction : SyncAction {
-        override val name = "TestAction"
-        var wasExecuted = false
+    private class RecordingAction : SyncAction {
+        override val name = "RecordingAction"
+        val executions = mutableListOf<ThreatInfo>()
 
         override fun execute(threat: ThreatInfo) {
-            wasExecuted = true
+            executions.add(threat)
         }
     }
 
-    private class TestDetector(
-        override val name: String,
-        private val threatLevel: ThreatLevel? = null
-    ) : ThreatDetector {
-        override var isEnabled = true
-        var wasCalled = false
+    private class FixedDetector(override val name: String, private val level: ThreatLevel) : ThreatDetector {
+        override var enabled = true
+        var calls = 0
 
-        override fun analyze(event: FileEvent): ThreatInfo? {
-            wasCalled = true
-            return threatLevel?.let {
-                ThreatInfo(
-                    level = it,
-                    detectorName = name,
-                    description = "Test threat",
-                    affectedFiles = listOf(event.file.absolutePath),
-                    timestamp = Instant.now()
-                )
-            }
+        override fun analyze(file: File, eventType: FileEvent.EventType, recentEvents: List<FileEvent>): ThreatInfo {
+            calls++
+            return ThreatInfo(
+                level = level,
+                detectorName = name,
+                description = "Fixed $level threat",
+                affectedFiles = listOf(file.absolutePath)
+            )
         }
 
-        override fun reset() {}
+        override fun reset() = Unit
     }
 }

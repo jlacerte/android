@@ -1,5 +1,5 @@
 /*
- * Nextcloud Sentinel Android - Canary Detector Tests
+ * Nextcloud Sentinel Android - Kill Switch Tests
  *
  * SPDX-FileCopyrightText: 2026 Nextcloud Sentinel Project
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -8,6 +8,7 @@
 package com.nextcloud.sentinel.killswitch.detectors
 
 import com.nextcloud.sentinel.killswitch.FileEvent
+import com.nextcloud.sentinel.killswitch.ThreatInfo
 import com.nextcloud.sentinel.killswitch.ThreatLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,12 +21,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-/**
- * Unit tests for CanaryDetector.
- *
- * Tests trap file (canary) monitoring for ransomware detection.
- * Any modification to a canary file indicates malicious activity.
- */
+@Suppress("TooManyFunctions")
 class CanaryDetectorTest {
 
     @get:Rule
@@ -37,280 +33,115 @@ class CanaryDetectorTest {
     @Before
     fun setUp() {
         detector = CanaryDetector()
-
-        // Create a canary file
-        canaryFile = tempFolder.newFile(".canary_trap.txt")
-        canaryFile.writeText("CANARY_SENTINEL_DO_NOT_MODIFY")
+        canaryFile = tempFolder.newFile(".killswitch_canary")
     }
 
-    // ==================== Canary Registration Tests ====================
+    private fun analyze(file: File, eventType: FileEvent.EventType): ThreatInfo =
+        detector.analyze(file, eventType, emptyList())
 
     @Test
-    fun `addCanaryFile registers file for monitoring`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-
-        assertTrue(detector.getCanaryFiles().contains(canaryFile.absolutePath))
-    }
-
-    @Test
-    fun `addCanaryFile accepts multiple files`() {
-        val canary1 = tempFolder.newFile("canary1.txt")
-        val canary2 = tempFolder.newFile("canary2.txt")
-
-        detector.addCanaryFile(canary1.absolutePath)
-        detector.addCanaryFile(canary2.absolutePath)
-
-        assertEquals(2, detector.getCanaryFiles().size)
+    fun `default patterns are recognised`() {
+        assertTrue(detector.isCanaryFile(canaryFile.absolutePath))
+        assertTrue(detector.isCanaryFile(File(tempFolder.root, "DO_NOT_DELETE.sentinel").absolutePath))
+        assertFalse(detector.isCanaryFile(File(tempFolder.root, "holiday.jpg").absolutePath))
     }
 
     @Test
-    fun `removeCanaryFile unregisters file`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-        detector.removeCanaryFile(canaryFile.absolutePath)
+    fun `addCanaryPattern registers a new exact pattern`() {
+        detector.addCanaryPattern("trap.txt")
 
-        assertFalse(detector.getCanaryFiles().contains(canaryFile.absolutePath))
+        assertTrue(detector.getPatterns().contains("trap.txt"))
+        assertTrue(detector.isCanaryFile(File(tempFolder.root, "trap.txt").absolutePath))
     }
 
     @Test
-    fun `clearCanaryFiles removes all files`() {
-        val canary1 = tempFolder.newFile("canary1.txt")
-        val canary2 = tempFolder.newFile("canary2.txt")
+    fun `duplicate pattern registration is ignored`() {
+        val before = detector.getPatterns().size
 
-        detector.addCanaryFile(canary1.absolutePath)
-        detector.addCanaryFile(canary2.absolutePath)
-        detector.clearCanaryFiles()
+        detector.addCanaryPattern(".killswitch_canary")
 
-        assertTrue(detector.getCanaryFiles().isEmpty())
-    }
-
-    // ==================== Canary Detection Tests ====================
-
-    @Test
-    fun `analyze returns CRITICAL when canary is modified`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Canary modification should trigger threat", threat)
-        assertEquals(ThreatLevel.CRITICAL, threat?.level)
+        assertEquals(before, detector.getPatterns().size)
     }
 
     @Test
-    fun `analyze returns CRITICAL when canary is deleted`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
+    fun `removeCanaryPattern unregisters the pattern`() {
+        detector.removeCanaryPattern(".killswitch_canary")
 
-        val event = FileEvent(canaryFile, FileEvent.EventType.DELETE)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Canary deletion should trigger threat", threat)
-        assertEquals(ThreatLevel.CRITICAL, threat?.level)
+        assertFalse(detector.getPatterns().contains(".killswitch_canary"))
+        assertFalse(detector.isCanaryFile(canaryFile.absolutePath))
     }
 
     @Test
-    fun `analyze returns null for non-canary files`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
+    fun `wildcard patterns match file names`() {
+        detector.addCanaryPattern("*.trap")
 
-        val normalFile = tempFolder.newFile("normal.txt")
-        val event = FileEvent(normalFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNull("Non-canary files should not trigger", threat)
+        assertTrue(detector.isCanaryFile(File(tempFolder.root, "anything.trap").absolutePath))
+        assertFalse(detector.isCanaryFile(File(tempFolder.root, "anything.trap.bak").absolutePath))
     }
 
     @Test
-    fun `analyze returns null when no canaries registered`() {
-        // No canaries registered
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNull("Should not trigger without registered canaries", threat)
+    fun `matching is case insensitive`() {
+        assertTrue(detector.isCanaryFile(File(tempFolder.root, "do_not_delete.SENTINEL").absolutePath))
     }
 
     @Test
-    fun `analyze description mentions canary file`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
+    fun `modifying a canary is CRITICAL with the file listed`() {
+        val threat = analyze(canaryFile, FileEvent.EventType.MODIFY)
 
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull(threat)
-        assertTrue(
-            "Description should mention canary",
-            threat?.description?.lowercase()?.contains("canary") == true ||
-            threat?.description?.lowercase()?.contains("trap") == true
-        )
+        assertEquals(ThreatLevel.CRITICAL, threat.level)
+        assertEquals("CanaryDetector", threat.detectorName)
+        assertTrue(threat.description.contains("CANARY"))
+        assertEquals(listOf(canaryFile.absolutePath), threat.affectedFiles)
     }
 
     @Test
-    fun `analyze includes canary path in affected files`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull(threat)
-        assertTrue(threat?.affectedFiles?.contains(canaryFile.absolutePath) == true)
-    }
-
-    // ==================== Event Type Tests ====================
-
-    @Test
-    fun `CREATE event on canary does not trigger`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-
-        // CREATE shouldn't trigger - canary was just created
-        val event = FileEvent(canaryFile, FileEvent.EventType.CREATE)
-        val threat = detector.analyze(event)
-
-        assertNull("CREATE should not trigger for canary", threat)
+    fun `deleting or renaming a canary is CRITICAL`() {
+        assertEquals(ThreatLevel.CRITICAL, analyze(canaryFile, FileEvent.EventType.DELETE).level)
+        assertEquals(ThreatLevel.CRITICAL, analyze(canaryFile, FileEvent.EventType.RENAME).level)
     }
 
     @Test
-    fun `all modification types trigger for canary`() {
-        val modifyTypes = listOf(
-            FileEvent.EventType.MODIFY,
-            FileEvent.EventType.DELETE
-        )
-
-        for (eventType in modifyTypes) {
-            val freshDetector = CanaryDetector()
-            val freshCanary = tempFolder.newFile("canary_${eventType.name}.txt")
-            freshDetector.addCanaryFile(freshCanary.absolutePath)
-
-            val event = FileEvent(freshCanary, eventType)
-            val threat = freshDetector.analyze(event)
-
-            assertNotNull("$eventType should trigger for canary", threat)
-        }
-    }
-
-    // ==================== Multiple Canaries Tests ====================
-
-    @Test
-    fun `detects correct canary among multiple`() {
-        val canary1 = tempFolder.newFile("canary1.txt")
-        val canary2 = tempFolder.newFile("canary2.txt")
-        val canary3 = tempFolder.newFile("canary3.txt")
-
-        detector.addCanaryFile(canary1.absolutePath)
-        detector.addCanaryFile(canary2.absolutePath)
-        detector.addCanaryFile(canary3.absolutePath)
-
-        // Only canary2 is modified
-        val event = FileEvent(canary2, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull(threat)
-        assertTrue(threat?.affectedFiles?.contains(canary2.absolutePath) == true)
-    }
-
-    // ==================== Path Matching Tests ====================
-
-    @Test
-    fun `matches canary by absolute path`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-
-        // Create event with same file but different File object
-        val samePath = File(canaryFile.absolutePath)
-        val event = FileEvent(samePath, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Should match by path", threat)
+    fun `creating a canary is not a threat`() {
+        assertEquals(ThreatLevel.NONE, analyze(canaryFile, FileEvent.EventType.CREATE).level)
     }
 
     @Test
-    fun `handles paths with different separators`() {
-        // This test is platform-specific
-        val path = canaryFile.absolutePath
-        detector.addCanaryFile(path)
+    fun `non-canary files are not a threat`() {
+        val normal = tempFolder.newFile("normal.txt")
 
-        // Try with canonical path
-        val canonicalFile = File(canaryFile.canonicalPath)
-        val event = FileEvent(canonicalFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Should handle canonical paths", threat)
+        assertEquals(ThreatLevel.NONE, analyze(normal, FileEvent.EventType.MODIFY).level)
+        assertEquals(ThreatLevel.NONE, analyze(normal, FileEvent.EventType.DELETE).level)
     }
 
-    // ==================== Detector Properties Tests ====================
+    @Test
+    fun `non-existent canary deletion is still detected`() {
+        val missing = File(tempFolder.root, "missing/.killswitch_canary")
+
+        assertEquals(ThreatLevel.CRITICAL, analyze(missing, FileEvent.EventType.DELETE).level)
+    }
 
     @Test
-    fun `detector has correct name`() {
+    fun `disabled detector can be re-enabled`() {
+        detector.enabled = false
+        assertEquals(ThreatLevel.NONE, analyze(canaryFile, FileEvent.EventType.MODIFY).level)
+
+        detector.enabled = true
+        assertEquals(ThreatLevel.CRITICAL, analyze(canaryFile, FileEvent.EventType.MODIFY).level)
+    }
+
+    @Test
+    fun `createCanaryFile writes a marker file only inside a directory`() {
+        val created = CanaryDetector.createCanaryFile(tempFolder.newFolder("watched"))
+
+        assertNotNull(created)
+        assertTrue(created!!.isFile)
+        assertTrue(detector.isCanaryFile(created.absolutePath))
+        assertNull(CanaryDetector.createCanaryFile(canaryFile))
+    }
+
+    @Test
+    fun `detector has correct name and is enabled by default`() {
         assertEquals("CanaryDetector", detector.name)
-    }
-
-    @Test
-    fun `detector is enabled by default`() {
-        assertTrue(detector.isEnabled)
-    }
-
-    @Test
-    fun `detector can be disabled`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-        detector.isEnabled = false
-
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNull("Disabled detector should not trigger", threat)
-    }
-
-    @Test
-    fun `re-enabling detector works`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-        detector.isEnabled = false
-        detector.isEnabled = true
-
-        val event = FileEvent(canaryFile, FileEvent.EventType.MODIFY)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Re-enabled detector should trigger", threat)
-    }
-
-    // ==================== Reset Tests ====================
-
-    @Test
-    fun `reset does not clear canary files`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-        detector.reset()
-
-        // Canary files should persist after reset
-        assertTrue(detector.getCanaryFiles().isNotEmpty())
-    }
-
-    // ==================== Edge Cases ====================
-
-    @Test
-    fun `handles duplicate canary registration`() {
-        detector.addCanaryFile(canaryFile.absolutePath)
-        detector.addCanaryFile(canaryFile.absolutePath)  // Duplicate
-
-        // Should not have duplicates
-        assertEquals(1, detector.getCanaryFiles().size)
-    }
-
-    @Test
-    fun `handles non-existent canary file path`() {
-        val nonExistent = "/path/to/nonexistent/canary.txt"
-        detector.addCanaryFile(nonExistent)
-
-        // Should still register the path
-        assertTrue(detector.getCanaryFiles().contains(nonExistent))
-
-        // Event for non-existent file should still trigger
-        val event = FileEvent(File(nonExistent), FileEvent.EventType.DELETE)
-        val threat = detector.analyze(event)
-
-        assertNotNull("Should detect deletion of non-existent canary", threat)
-    }
-
-    @Test
-    fun `handles empty path gracefully`() {
-        detector.addCanaryFile("")
-
-        // Should not crash, may or may not add
-        val event = FileEvent(File(""), FileEvent.EventType.MODIFY)
-        detector.analyze(event)  // Should not crash
+        assertTrue(detector.enabled)
     }
 }
