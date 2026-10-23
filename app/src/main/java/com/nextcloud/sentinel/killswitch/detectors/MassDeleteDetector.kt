@@ -32,14 +32,11 @@ class MassDeleteDetector : ThreatDetector {
     override var enabled: Boolean = true
 
     // Configurable thresholds
-    var threshold: Int = 10           // Files deleted to trigger alert
-    var rateLimit: Double = 5.0       // Files per second limit
+    var threshold: Int = DEFAULT_THRESHOLD
+    var rateLimit: Double = DEFAULT_RATE_LIMIT
 
-    override fun analyze(
-        file: File,
-        eventType: FileEvent.EventType,
-        recentEvents: List<FileEvent>
-    ): ThreatInfo {
+    @Suppress("ReturnCount", "LongMethod")
+    override fun analyze(file: File, eventType: FileEvent.EventType, recentEvents: List<FileEvent>): ThreatInfo {
         if (!enabled) return ThreatInfo.none()
 
         // Only interested in deletions
@@ -68,11 +65,15 @@ class MassDeleteDetector : ThreatDetector {
         }
 
         // Calculate deletion rate (files per second)
+        // All items of one sync run are analyzed within milliseconds of each
+        // other, which would otherwise turn any two deletions into a "high
+        // deletion rate". Same guard as the desktop MassDeleteDetector.
         var rate = 0.0
-        if (oldestDelete != null && newestDelete != null) {
+        val minDeletesForRate = maxOf(MIN_DELETES_FOR_RATE, threshold / 2)
+        if (deleteCount >= minDeletesForRate && oldestDelete != null && newestDelete != null) {
             val msElapsed = newestDelete - oldestDelete
-            if (msElapsed > 0) {
-                rate = (deleteCount * 1000.0) / msElapsed
+            if (msElapsed >= MIN_RATE_WINDOW_MS) {
+                rate = (deleteCount * MILLIS_PER_SECOND) / msElapsed
             }
         }
 
@@ -105,7 +106,7 @@ class MassDeleteDetector : ThreatDetector {
                 )
             }
 
-            deleteCount >= (threshold * 0.5).toInt() -> {
+            deleteCount >= (threshold * MEDIUM_RATIO).toInt() -> {
                 ThreatInfo(
                     level = ThreatLevel.MEDIUM,
                     detectorName = name,
@@ -120,5 +121,14 @@ class MassDeleteDetector : ThreatDetector {
 
     override fun reset() {
         // No internal state to reset
+    }
+
+    companion object {
+        const val DEFAULT_THRESHOLD = 10
+        const val DEFAULT_RATE_LIMIT = 5.0
+        private const val MILLIS_PER_SECOND = 1000.0
+        private const val MIN_RATE_WINDOW_MS = 1000L
+        private const val MIN_DELETES_FOR_RATE = 3
+        private const val MEDIUM_RATIO = 0.5
     }
 }
